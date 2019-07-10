@@ -8,8 +8,8 @@ import (
 
 // TODO(blacknon):
 //     Confで情報を渡していたが、ライブラリ化にあたってもっと汎用的な方法に切り替えたい。
-//     Signerの生成を外出しして、Proxyの作成については認証情報のMapを渡せばいいのか？？
-//     特にProxyについてはちゃんと考える必要あり？？
+//     Signerの生成を外出しして、別の関数側で生成した認証情報Signerを渡せばいいか？
+//     Proxyについてはどうやるかイメージができてない…ちゃんと考える必要あり？？
 
 // Connect structure to store contents about ssh connection.
 type Connect struct {
@@ -19,6 +19,8 @@ type Connect struct {
 	ForwardRemote string
 
 	ForwardX11 bool
+
+	signers []ssh.Signer
 }
 
 // SendKeepAlive send packet to session.
