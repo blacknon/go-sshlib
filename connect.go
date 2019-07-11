@@ -15,6 +15,8 @@ import (
 type Connect struct {
 	Client *ssh.Client
 
+	IsTty bool
+
 	ForwardLocal  string
 	ForwardRemote string
 
@@ -22,6 +24,10 @@ type Connect struct {
 
 	signers []ssh.Signer
 }
+
+func (c *Connect) CreateClient() {}
+
+func (c *Connect) CreateSession() {}
 
 // SendKeepAlive send packet to session.
 func (c *Connect) SendKeepAlive(session *ssh.Session) {
