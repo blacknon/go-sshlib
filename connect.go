@@ -37,7 +37,7 @@ type Connect struct {
 	Logging bool
 }
 
-//
+// CreateClient
 func (c *Connect) CreateClient(host, user string, port int, signers []ssh.Signer) (err error) {
 	uri := net.JoinHostPort(host, string(port))
 
@@ -72,7 +72,7 @@ func (c *Connect) CreateClient(host, user string, port int, signers []ssh.Signer
 	return
 }
 
-//
+// CreateSession
 func (c *Connect) CreateSession() (session ssh.Session, err error) {
 	// Create session
 	session, err = c.Client.NewSession()
