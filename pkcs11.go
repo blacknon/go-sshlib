@@ -1,3 +1,7 @@
+// Copyright (c) 2019 Blacknon. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
+
 package sshlib
 
 import (
@@ -21,8 +25,8 @@ type PKCS11 struct {
 }
 
 // CreateCtx create and into PKCS11.Ctx
-func (p *PKCS11) CreateCtx(pkcs11Provider string) (err error) {
-	ctx := pkcs11.New(pkcs11Provider)
+func (p *PKCS11) CreateCtx() (err error) {
+	ctx := pkcs11.New(p.Pkcs11Provider)
 	err = ctx.Initialize()
 	if err != nil {
 		return
