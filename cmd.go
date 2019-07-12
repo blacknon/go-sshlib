@@ -4,8 +4,6 @@
 
 package sshlib
 
-import "io"
-
 // Cmd connect and run command over ssh.
 //
-func (c Connect) Cmd(command string, input chan io.Writer, output chan []byte) {}
+// func (c *Connect) Cmd(command string, input chan io.Writer, output chan []byte) {}
