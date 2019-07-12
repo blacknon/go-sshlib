@@ -17,7 +17,6 @@ import (
 
 // Shell connect login shell over ssh.
 //
-//
 func (c *Connect) Shell() (err error) {
 	session, err := c.CreateSession()
 	if err != nil {
@@ -46,9 +45,7 @@ func (c *Connect) Shell() (err error) {
 	// Logging
 	if c.Logging {
 		session, _ = c.logging(session)
-		// TODO(blacknon): errorの出力をライブラリとしてどうするかを検討する
-		// if err != nil {
-		// }
+		// TODO(blacknon): error handling
 	}
 
 	// Start shell
