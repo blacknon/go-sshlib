@@ -132,3 +132,5 @@ func (p *PKCS11) GetCryptoSigner() (signers []crypto.Signer, err error) {
 
 	return signers, err
 }
+
+// TODO(blacknon): ssh-agent用に、PrivateKeyのinterfaceを返す関数の作成

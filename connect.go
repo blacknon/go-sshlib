@@ -31,6 +31,10 @@ type Connect struct {
 	// Forward ssh agent flag.
 	ForwardAgent bool
 
+	// ssh-agent interface.
+	// agent.Agent or agent.ExtendedAgent
+	agent interface{}
+
 	// Forward x11 flag.
 	ForwardX11 bool
 
