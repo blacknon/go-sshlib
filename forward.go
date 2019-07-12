@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-//
+// TCPForward
 //
 func (c *Connect) TCPForward(localAddr, remoteAddr addr) (err error) {
 	listener, err := net.Listen("tcp", local)
