@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
-//
+// ConnectSshAgent
 //
 func (c *Connect) ConnectSshAgent() {
 	// Get env "SSH_AUTH_SOCK" and connect.
