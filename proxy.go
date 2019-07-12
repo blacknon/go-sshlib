@@ -48,7 +48,7 @@ type Proxy struct {
 	Forwarder proxy.Dialer
 }
 
-//
+// CreateProxyDialer retrun proxy.Dialer.
 //
 func (p *Proxy) CreateProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	switch p.Type {
