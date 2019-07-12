@@ -7,17 +7,15 @@ package sshlib
 import (
 	"net"
 	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
 )
-
-// TODO(blacknon):
-//     Confで情報を渡していたが、ライブラリ化にあたってもっと汎用的な方法に切り替えたい。
-//     Signerの生成を外出しして、別の関数側で生成した認証情報Signerを渡せばいいか？
-//     Proxyについてはどうやるかイメージができてない…ちゃんと考える必要あり？？
 
 // Connect structure to store contents about ssh connection.
 type Connect struct {
@@ -27,14 +25,23 @@ type Connect struct {
 	// ProxyDialer
 	ProxyDialer proxy.Dialer
 
+	// Session use tty flag.
 	TTY bool
 
+	// Forward ssh agent flag.
 	ForwardAgent bool
 
+	// Forward x11 flag.
 	ForwardX11 bool
 
-	// ターミナルでだけ動作するようにしたらよいか？？？
+	// shell terminal log flag
 	Logging bool
+
+	// terminal log add timestamp flag
+	logTimestamp bool
+
+	// terminal log path
+	logFile string
 }
 
 // CreateClient
@@ -126,6 +133,26 @@ func RequestTty(session *ssh.Session) (*ssh.Session, error) {
 	if err = session.RequestPty(term, hight, width, modes); err != nil {
 		session.Close()
 		return session, err
+	}
+
+	// Terminal resize goroutine.
+	// It is not work Windows os.
+	if runtime.GOOS != "windows" {
+		winch := syscall.Signal(0x1c)
+
+		signal_chan := make(chan os.Signal, 1)
+		signal.Notify(signal_chan, winch)
+		go func() {
+			for {
+				s := <-signal_chan
+				switch s {
+				case winch:
+					fd := int(os.Stdout.Fd())
+					width, height, _ = terminal.GetSize(fd)
+					session.WindowChange(height, width)
+				}
+			}
+		}()
 	}
 
 	return
