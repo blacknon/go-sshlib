@@ -15,6 +15,9 @@ import (
 type Connect struct {
 	Client *ssh.Client
 
+	// Proxyとして、ProxyDiallerとかそういうのをInterfaceとして入れればいいか…？？
+	// Proxy interface{}
+
 	IsTty bool
 
 	ForwardLocal  string
