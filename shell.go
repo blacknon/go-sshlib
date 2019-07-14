@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 // Shell connect login shell over ssh.
 //
 func (c *Connect) Shell() (err error) {
+	// Create session
 	session, err := c.CreateSession()
 	if err != nil {
 		return
@@ -28,7 +30,7 @@ func (c *Connect) Shell() (err error) {
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
 
-	// input
+	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
 	state, err := terminal.MakeRaw(fd)
 	if err != nil {
@@ -36,16 +38,31 @@ func (c *Connect) Shell() (err error) {
 	}
 	defer terminal.Restore(fd, state)
 
+	// Logging
+	if c.logging {
+		session, err = c.logger(session)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	// Request tty
-	session, err = RequestTty(session)
+	err = RequestTty(session)
 	if err != nil {
 		return
 	}
 
-	// Logging
-	if c.Logging {
-		session, _ = c.logging(session)
-		// TODO(blacknon): error handling
+	// ssh agent forwarding
+	if c.ForwardAgent {
+		session = c.ForwardSshAgent(session)
+	}
+
+	// x11 forwarding
+	if c.ForwardX11 {
+		err = c.X11Forward(session)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Start shell
@@ -66,12 +83,20 @@ func (c *Connect) Shell() (err error) {
 }
 
 //
-func (c *Connect) logging(session *ssh.Session) (*ssh.Session, error) {
-	log, err := os.OpenFile(c.logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
+//
+func (c *Connect) SetLog(path string, timestamp bool) {
+	c.logging = true
+	c.logFile = path
+	c.logTimestamp = timestamp
+}
+
+//
+//
+func (c *Connect) logger(session *ssh.Session) (*ssh.Session, error) {
+	logfile, err := os.OpenFile(c.logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
 	if err != nil {
 		return session, err
 	}
-	defer log.Close()
 
 	if c.logTimestamp {
 		buf := new(bytes.Buffer)
@@ -89,7 +114,7 @@ func (c *Connect) logging(session *ssh.Session) (*ssh.Session, error) {
 						continue
 					} else {
 						timestamp := time.Now().Format("2006/01/02 15:04:05 ") // yyyy/mm/dd HH:MM:SS
-						fmt.Fprintf(log, timestamp+string(append(preLine, line...)))
+						fmt.Fprintf(logfile, timestamp+string(append(preLine, line...)))
 						preLine = []byte{}
 					}
 				} else {
@@ -99,8 +124,8 @@ func (c *Connect) logging(session *ssh.Session) (*ssh.Session, error) {
 		}()
 
 	} else {
-		session.Stdout = io.MultiWriter(session.Stdout, log)
-		session.Stderr = io.MultiWriter(session.Stderr, log)
+		session.Stdout = io.MultiWriter(session.Stdout, logfile)
+		session.Stderr = io.MultiWriter(session.Stderr, logfile)
 	}
 
 	return session, err
