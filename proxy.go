@@ -30,7 +30,7 @@ type Proxy struct {
 
 	// Port set proxy port.
 	//
-	Port int
+	Port string
 
 	// Port set proxy user.
 	//
@@ -67,21 +67,22 @@ func (p *Proxy) CreateProxyDialer() (proxyDialer proxy.Dialer, err error) {
 //
 func (p *Proxy) CreateHttpProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	// Regist dialer
-	proxy.RegisterDialerType("http", newHTTPProxy)
-	proxy.RegisterDialerType("https", newHTTPProxy)
+	proxy.RegisterDialerType("http", newHttpProxy)
+	proxy.RegisterDialerType("https", newHttpProxy)
 
 	proxyURL := p.Type + "://" + p.Addr
 	if p.User != "" && p.Password != "" {
 		proxyURL = p.Type + "://" + p.User + ":" + p.Password + "@" + p.Addr
 	}
 
-	if p.Port != nil {
+	if p.Port != "" {
 		proxyURL = proxyURL + ":" + string(p.Port)
 	}
 
 	proxyURI, _ := url.Parse(proxyURL)
 
-	forwarder := proxy.Direct
+	var forwarder proxy.Dialer
+	forwarder = proxy.Direct
 	if p.Forwarder != nil {
 		forwarder = p.Forwarder
 	}
@@ -100,12 +101,13 @@ func (p *Proxy) CreateSocks5ProxyDialer() (proxyDialer proxy.Dialer, err error) 
 		proxyAuth.Password = p.Password
 	}
 
-	forwarder := proxy.Direct
+	var forwarder proxy.Dialer
+	forwarder = proxy.Direct
 	if p.Forwarder != nil {
 		forwarder = p.Forwarder
 	}
 
-	proxyDialer, err = proxy.SOCKS5("tcp", net.JoinHostPort(proxyConf.Addr, proxyConf.Port), proxyAuth, forwarder)
+	return proxy.SOCKS5("tcp", net.JoinHostPort(p.Addr, p.Port), proxyAuth, forwarder)
 }
 
 // CreateProxyCommandProxyDialer as ProxyCommand.

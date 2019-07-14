@@ -11,10 +11,22 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// CreateSignerPassword returns []ssh.Signer generated from password.
+// CreateAuthMethodPassword returns ssh.AuthMethod generated from password.
 //
-func CreateSignerPassword(password string) (signer ssh.Signer) {
+func CreateAuthMethodPassword(password string) (auth ssh.AuthMethod) {
 	return ssh.Password(password)
+}
+
+// CreateAuthMethodPublicKey returns ssh.AuthMethod generated from PublicKey.
+//
+func CreateAuthMethodPublicKey(key, password string) (auth ssh.AuthMethod, err error) {
+	signer, err := CreateSignerPublicKey(key, password)
+	if err != nil {
+		return
+	}
+
+	auth = ssh.PublicKeys(signer)
+	return
 }
 
 // CreateSignerPublicKey returns []ssh.Signer generated from public key.
@@ -44,6 +56,18 @@ func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) 
 // TODO(blacknon): Create
 // func CreateSignerPublicKeyPrompt() (signer ssh.Signer, err error) {}
 
+// CreateAuthMethodCertificate returns []ssh.Signer generated from Certificate.
+//
+func CreateAuthMethodCertificate(cert string, keySigner ssh.Signer) (auth ssh.AuthMethod, err error) {
+	signer, err := CreateSignerCertificate(cert, keySigner)
+	if err != nil {
+		return
+	}
+
+	auth = ssh.PublicKeys(signer)
+	return
+}
+
 // CreateSignerCertificate returns []ssh.Signer generated from Certificate.
 //
 func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.Signer, err error) {
@@ -70,11 +94,25 @@ func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.
 	}
 
 	// Create Certificate Signer
-	signer, err = ssh.NewCertSigner(certificate, keySigner)
+	certSigner, err = ssh.NewCertSigner(certificate, keySigner)
 	if err != nil {
 		return
 	}
 
+	return
+}
+
+// CreateAuthMethodPKCS11
+//
+func CreateAuthMethodPKCS11(provider, pin string) (auth []ssh.AuthMethod, err error) {
+	signers, err := CreateSignerPKCS11(provider, pin)
+	if err != nil {
+		return
+	}
+
+	for _, signer := range signers {
+		auth = append(auth, ssh.PublicKeys(signer))
+	}
 	return
 }
 
@@ -102,7 +140,7 @@ func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) 
 	}
 
 	// Recreate ctx (pkcs11=>crypto11)
-	err = p11.RecreateCtx(p.Pkcs11Provider)
+	err = p11.RecreateCtx(p11.Pkcs11Provider)
 	if err != nil {
 		return
 	}
@@ -114,7 +152,7 @@ func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) 
 	}
 
 	// Get crypto.Signer
-	cryptoSigners, err = p11.GetCryptoSigner()
+	cryptoSigners, err := p11.GetCryptoSigner()
 	if err != nil {
 		return
 	}
