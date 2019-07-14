@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
@@ -28,18 +27,22 @@ type Connect struct {
 	// Session use tty flag.
 	TTY bool
 
+	// Stdin to be passed to ssh connection destination.
+	// If the value is set here, it is treated as passed from the pipe.
+	Stdin []byte
+
 	// Forward ssh agent flag.
 	ForwardAgent bool
 
 	// ssh-agent interface.
 	// agent.Agent or agent.ExtendedAgent
-	agent interface{}
+	agent AgentInterface
 
 	// Forward x11 flag.
 	ForwardX11 bool
 
 	// shell terminal log flag
-	Logging bool
+	logging bool
 
 	// terminal log add timestamp flag
 	logTimestamp bool
@@ -49,24 +52,24 @@ type Connect struct {
 }
 
 // CreateClient
-func (c *Connect) CreateClient(host, user string, port int, signers []ssh.Signer) (err error) {
-	uri := net.JoinHostPort(host, string(port))
+func (c *Connect) CreateClient(host, user, port string, authMethods []ssh.AuthMethod) (err error) {
+	uri := net.JoinHostPort(host, port)
 
 	// Create new ssh.ClientConfig{}
 	config := &ssh.ClientConfig{
 		User:            user,
-		Auth:            ssh.PublicKeys(signers...),
+		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         30 * time.Second,
+		Timeout:         20 * time.Second,
 	}
 
 	// check Dialer
-	if c.Dialer == nil {
-		c.Dialer = proxy.Direct
+	if c.ProxyDialer == nil {
+		c.ProxyDialer = proxy.Direct
 	}
 
 	// Dial to host:port
-	netConn, err := c.Dialer.Dial("tcp", uri)
+	netConn, err := c.ProxyDialer.Dial("tcp", uri)
 	if err != nil {
 		return
 	}
@@ -84,16 +87,9 @@ func (c *Connect) CreateClient(host, user string, port int, signers []ssh.Signer
 }
 
 // CreateSession
-func (c *Connect) CreateSession() (session ssh.Session, err error) {
+func (c *Connect) CreateSession() (session *ssh.Session, err error) {
 	// Create session
 	session, err = c.Client.NewSession()
-
-	if c.TTY {
-		session, err = RequestTty(session)
-		if err != nil {
-			return
-		}
-	}
 
 	return
 }
@@ -118,9 +114,9 @@ func (c *Connect) CheckClientAlive() error {
 // RequestTty requests the association of a pty with the session on the remote
 // host. Terminal size is obtained from the currently connected terminal
 //
-func RequestTty(session *ssh.Session) (*ssh.Session, error) {
+func RequestTty(session *ssh.Session) (err error) {
 	modes := ssh.TerminalModes{
-		ssh.ECHO:          0,
+		ssh.ECHO:          1,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
@@ -129,35 +125,31 @@ func RequestTty(session *ssh.Session) (*ssh.Session, error) {
 	fd := int(os.Stdin.Fd())
 	width, hight, err := terminal.GetSize(fd)
 	if err != nil {
-		return session, err
+		return
 	}
 
-	// TODO(blacknon): 環境変数から取得する方式だと、Windowsでうまく動作するか不明なので確認
+	// TODO(blacknon): 環境変数から取得する方式だと、Windowsでうまく動作するか不明なので確認して対処する
 	term := os.Getenv("TERM")
 	if err = session.RequestPty(term, hight, width, modes); err != nil {
 		session.Close()
-		return session, err
+		return
 	}
 
 	// Terminal resize goroutine.
-	// It is not work Windows os.
-	if runtime.GOOS != "windows" {
-		winch := syscall.Signal(0x1c)
-
-		signal_chan := make(chan os.Signal, 1)
-		signal.Notify(signal_chan, winch)
-		go func() {
-			for {
-				s := <-signal_chan
-				switch s {
-				case winch:
-					fd := int(os.Stdout.Fd())
-					width, height, _ = terminal.GetSize(fd)
-					session.WindowChange(height, width)
-				}
+	winch := syscall.Signal(0x1c)
+	signal_chan := make(chan os.Signal, 1)
+	signal.Notify(signal_chan, winch)
+	go func() {
+		for {
+			s := <-signal_chan
+			switch s {
+			case winch:
+				fd := int(os.Stdout.Fd())
+				width, hight, _ = terminal.GetSize(fd)
+				session.WindowChange(hight, width)
 			}
-		}()
-	}
+		}
+	}()
 
 	return
 }

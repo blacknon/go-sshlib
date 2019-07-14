@@ -17,11 +17,18 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+type x11request struct {
+	SingleConnection bool
+	AuthProtocol     string
+	AuthCookie       string
+	ScreenNumber     uint32
+}
+
 //
 //
 func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	display := getX11Display()
-	_, xAuth, err := readAuthority("", "0")
+	_, xAuth, err := readAuthority("", display)
 	if err != nil {
 		return
 	}
@@ -58,6 +65,8 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 			}
 		}()
 	}
+
+	return
 }
 
 //
@@ -114,13 +123,17 @@ func x11forwarder(channel ssh.Channel) {
 
 //
 //
-func getX11Display() int {
+func getX11Display() string {
 	display := os.Getenv("DISPLAY")
 	colonIdx := strings.LastIndex(display, ":")
 	dotIdx := strings.LastIndex(display, ".")
 
 	if colonIdx < 0 {
-		return 0
+		return "0"
+	}
+
+	if len(display) > dotIdx {
+		return "0"
 	}
 
 	return display[colonIdx+1 : dotIdx]
@@ -221,8 +234,8 @@ func getString(r io.Reader, b []byte) (string, error) {
 
 // TCPForward
 //
-func (c *Connect) TCPForward(localAddr, remoteAddr addr) (err error) {
-	listener, err := net.Listen("tcp", local)
+func (c *Connect) TCPForward(localAddr, remoteAddr string) (err error) {
+	listner, err := net.Listen("tcp", localAddr)
 	if err != nil {
 		return
 	}
@@ -238,13 +251,18 @@ func (c *Connect) TCPForward(localAddr, remoteAddr addr) (err error) {
 			go c.forwarder(conn, "tcp", remoteAddr)
 		}
 	}()
+
+	return
 }
 
 // forwarder tcp/udp port forward. dialType in `tcp` or `udp`.
 // addr is remote port forward address (`localhost:80`, `192.168.10.100:443` etc...).
-func (c *Connect) forwarder(local net.Conn, dialType string, addr string) {
+func (c *Connect) forwarder(local net.Conn, dialType string, addr string) (err error) {
 	// Create ssh connect
 	remote, err := c.Client.Dial(dialType, addr)
+	if err != nil {
+		return
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -262,6 +280,8 @@ func (c *Connect) forwarder(local net.Conn, dialType string, addr string) {
 	}()
 
 	wg.Wait()
-	conn.Close()
+	remote.Close()
 	local.Close()
+
+	return
 }
