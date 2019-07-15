@@ -24,8 +24,11 @@ type x11request struct {
 	ScreenNumber     uint32
 }
 
+// X11Forward send x11-req to ssh server and do x11 forwarding.
+// Since the display number of the transfer destination and the PATH of the socket communication file
+// are checked from the local environment variable DISPLAY, this does not work if it is not set.
 //
-//
+// Also, the value of COOKIE transfers the local value as it is. This will be addressed in the future.
 func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	display := getX11Display()
 	_, xAuth, err := readAuthority("", display)
@@ -43,7 +46,7 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 		SingleConnection: false,
 		AuthProtocol:     string("MIT-MAGIC-COOKIE-1"),
 		AuthCookie:       string(cookie),
-		ScreenNumber:     uint32(0), // TODO(blacknon): 仮置きの値
+		ScreenNumber:     uint32(0),
 	}
 
 	// Send x11-req Request
@@ -69,8 +72,7 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	return
 }
 
-//
-//
+// x11Connect return net.Conn x11 socket.
 func x11Connect() (conn net.Conn, err error) {
 	display := os.Getenv("DISPLAY")
 	display0 := display
@@ -94,8 +96,7 @@ func x11Connect() (conn net.Conn, err error) {
 	return
 }
 
-//
-//
+// x11forwarder forwarding socket x11 data.
 func x11forwarder(channel ssh.Channel) {
 	conn, err := x11Connect()
 
@@ -121,8 +122,7 @@ func x11forwarder(channel ssh.Channel) {
 	channel.Close()
 }
 
-//
-//
+// getX11Display return X11 display number from env $DISPLAY
 func getX11Display() string {
 	display := os.Getenv("DISPLAY")
 	colonIdx := strings.LastIndex(display, ":")
@@ -140,7 +140,6 @@ func getX11Display() string {
 }
 
 // readAuthority Read env `$XAUTHORITY`. If not set value, read `~/.Xauthority`.
-//
 func readAuthority(hostname, display string) (
 	name string, data []byte, err error) {
 
@@ -232,8 +231,10 @@ func getString(r io.Reader, b []byte) (string, error) {
 	return string(b), nil
 }
 
-// TCPForward
+// TCPForward forwarding tcp data.
+// localAddr, remoteAddr is write as "address:port".
 //
+// example) "127.0.0.1:22", "abc.com:9977"
 func (c *Connect) TCPForward(localAddr, remoteAddr string) (err error) {
 	listner, err := net.Listen("tcp", localAddr)
 	if err != nil {
