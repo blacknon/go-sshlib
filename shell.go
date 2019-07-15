@@ -17,7 +17,6 @@ import (
 )
 
 // Shell connect login shell over ssh.
-//
 func (c *Connect) Shell() (err error) {
 	// Create session
 	session, err := c.CreateSession()
@@ -82,16 +81,15 @@ func (c *Connect) Shell() (err error) {
 	return
 }
 
-//
-//
+// SetLog set up terminal log logging.
+// This only happens in Connect.Shell().
 func (c *Connect) SetLog(path string, timestamp bool) {
 	c.logging = true
 	c.logFile = path
 	c.logTimestamp = timestamp
 }
 
-//
-//
+// logger is logging terminal log to c.logFile
 func (c *Connect) logger(session *ssh.Session) (*ssh.Session, error) {
 	logfile, err := os.OpenFile(c.logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
 	if err != nil {
