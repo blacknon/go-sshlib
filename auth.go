@@ -12,13 +12,12 @@ import (
 )
 
 // CreateAuthMethodPassword returns ssh.AuthMethod generated from password.
-//
 func CreateAuthMethodPassword(password string) (auth ssh.AuthMethod) {
 	return ssh.Password(password)
 }
 
 // CreateAuthMethodPublicKey returns ssh.AuthMethod generated from PublicKey.
-//
+// If you have not specified a passphrase, please specify a empty character("").
 func CreateAuthMethodPublicKey(key, password string) (auth ssh.AuthMethod, err error) {
 	signer, err := CreateSignerPublicKey(key, password)
 	if err != nil {
@@ -30,7 +29,7 @@ func CreateAuthMethodPublicKey(key, password string) (auth ssh.AuthMethod, err e
 }
 
 // CreateSignerPublicKey returns []ssh.Signer generated from public key.
-//
+// If you have not specified a passphrase, please specify a empty character("").
 func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) {
 	// get absolute path
 	key = getAbsPath(key)
@@ -56,8 +55,9 @@ func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) 
 // TODO(blacknon): Create
 // func CreateSignerPublicKeyPrompt() (signer ssh.Signer, err error) {}
 
-// CreateAuthMethodCertificate returns []ssh.Signer generated from Certificate.
-//
+// CreateAuthMethodCertificate returns ssh.AuthMethod generated from Certificate.
+// To generate an AuthMethod from a certificate, you will need the certificate's private key Signer.
+// Signer should be generated from CreateSignerPublicKey() or CreateSignerPKCS11().
 func CreateAuthMethodCertificate(cert string, keySigner ssh.Signer) (auth ssh.AuthMethod, err error) {
 	signer, err := CreateSignerCertificate(cert, keySigner)
 	if err != nil {
@@ -68,8 +68,9 @@ func CreateAuthMethodCertificate(cert string, keySigner ssh.Signer) (auth ssh.Au
 	return
 }
 
-// CreateSignerCertificate returns []ssh.Signer generated from Certificate.
-//
+// CreateSignerCertificate returns ssh.Signer generated from Certificate.
+// To generate an AuthMethod from a certificate, you will need the certificate's private key Signer.
+// Signer should be generated from CreateSignerPublicKey() or CreateSignerPKCS11().
 func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.Signer, err error) {
 	// get absolute path
 	cert = getAbsPath(cert)
@@ -102,8 +103,10 @@ func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.
 	return
 }
 
-// CreateAuthMethodPKCS11
+// CreateAuthMethodPKCS11 return []ssh.AuthMethod generated from pkcs11 token.
+// PIN is required to generate a AuthMethod from a PKCS 11 token.
 //
+// WORNING: Does not work if multiple tokens are stuck at the same time.
 func CreateAuthMethodPKCS11(provider, pin string) (auth []ssh.AuthMethod, err error) {
 	signers, err := CreateSignerPKCS11(provider, pin)
 	if err != nil {
@@ -117,7 +120,9 @@ func CreateAuthMethodPKCS11(provider, pin string) (auth []ssh.AuthMethod, err er
 }
 
 // CreateSignerCertificate returns []ssh.Signer generated from PKCS11 token.
+// PIN is required to generate a Signer from a PKCS 11 token.
 //
+// WORNING: Does not work if multiple tokens are stuck at the same time.
 func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) {
 	// get absolute path
 	provider = getAbsPath(provider)
@@ -171,8 +176,3 @@ func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) 
 //
 // TODO(blacknon): Create
 // func CreateSignerPKCS11Prompt() (signers []ssh.Signer, err error) {}
-
-// CreateSignerCertificate returns []ssh.Signer generated from ssh-agent.
-//
-// TODO(blacknon): Create
-// func CreateSignerAgent() (signers []ssh.Signer, err error) {}
