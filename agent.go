@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
+// AgentInterface Interface for storing agent.Agent or agent.ExtendedAgent.
 type AgentInterface interface{}
 
 // ConnectSshAgent
