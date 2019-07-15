@@ -24,7 +24,8 @@ type PKCS11 struct {
 	SessionHandle  pkcs11.SessionHandle
 }
 
-// CreateCtx create and into PKCS11.Ctx
+// CreateCtx create and into PKCS11.Ctx.
+// This is the first process to be performed when processing with PKCS11.
 func (p *PKCS11) CreateCtx() (err error) {
 	ctx := pkcs11.New(p.Pkcs11Provider)
 	err = ctx.Initialize()
@@ -64,7 +65,8 @@ func (p *PKCS11) GetTokenLabel() (err error) {
 	return
 }
 
-// RecreateCtx exchange PKCS11.Ctx with PIN accessible ctx
+// RecreateCtx exchange PKCS11.Ctx with PIN accessible ctx.
+// Recreate Ctx to access information after PIN entry.
 func (p *PKCS11) RecreateCtx(pkcs11Provider string) (err error) {
 	p.Ctx.Destroy()
 	config := &crypto11.PKCS11Config{
