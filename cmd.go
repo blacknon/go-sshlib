@@ -8,13 +8,13 @@ import (
 	"bytes"
 	"io"
 	"log"
+	"os"
 	"time"
 )
 
-// Cmd connect and run command over ssh.
-//
-//
-func (c *Connect) Cmd(command string, input chan io.Writer, output chan []byte) {
+// CmdWriter connect and run command over ssh.
+// In order to be able to send in parallel from io.MultiWriter, it is made to receive Writer by channel.
+func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Writer) (err error) {
 	// create session
 	session, err := c.CreateSession()
 	if err != nil {
@@ -22,9 +22,49 @@ func (c *Connect) Cmd(command string, input chan io.Writer, output chan []byte) 
 		return
 	}
 
-	// Request tty
-	err = RequestTty(session)
+	// ssh agent forwarding
+	if c.ForwardAgent {
+		session = c.ForwardSshAgent(session)
+	}
+
+	// x11 forwarding
+	if c.ForwardX11 {
+		err = c.X11Forward(session)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// if set Stdin,
+	writer, _ := session.StdinPipe()
+	input <- writer
+	defer writer.Close()
+
+	// Set output buffer
+	buf := new(bytes.Buffer)
+	session.Stdout = io.MultiWriter(buf)
+	session.Stderr = io.MultiWriter(buf)
+
+	// Run Command
+	isExit := make(chan bool)
+	go func() {
+		session.Run(command)
+		isExit <- true
+	}()
+
+	// Send output channel
+	sendCmdOutput(buf, output, isExit)
+
+	return
+}
+
+// Cmd connect and run command over ssh.
+// Output data is processed by channel because it is executed in parallel. If specification is troublesome, it is good to generate and process session from ssh package.
+func (c *Connect) Cmd(command string, output chan []byte) (err error) {
+	// create session
+	session, err := c.CreateSession()
 	if err != nil {
+		close(output)
 		return
 	}
 
@@ -45,8 +85,7 @@ func (c *Connect) Cmd(command string, input chan io.Writer, output chan []byte) 
 	if len(c.Stdin) > 0 {
 		session.Stdin = bytes.NewReader(c.Stdin)
 	} else {
-		writer, _ := session.StdinPipe()
-		input <- writer
+		session.Stdin = os.Stdin
 	}
 
 	// Set output buffer
@@ -61,6 +100,14 @@ func (c *Connect) Cmd(command string, input chan io.Writer, output chan []byte) 
 		isExit <- true
 	}()
 
+	// Send output channel
+	sendCmdOutput(buf, output, isExit)
+
+	return
+}
+
+// sendCmdOutput send to output channel.
+func sendCmdOutput(buf *bytes.Buffer, output chan []byte, isExit <-chan bool) {
 	// Send output channel
 GetOutputLoop:
 	for {
