@@ -31,8 +31,9 @@ type x11request struct {
 // Also, the value of COOKIE transfers the local value as it is. This will be addressed in the future.
 func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	display := getX11Display()
+
 	_, xAuth, err := readAuthority("", display)
-	if err != nil {
+	if err != io.EOF {
 		return
 	}
 
