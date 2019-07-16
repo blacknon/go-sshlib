@@ -137,4 +137,14 @@ func (p *PKCS11) GetCryptoSigner() (signers []crypto.Signer, err error) {
 	return signers, err
 }
 
+// GetPin prompt for PIN if P11.Pin is blank
+// Only Support UNIX-like OS.
+func (p *PKCS11) GetPIN() (err error) {
+	if p.PIN == "" {
+		p.PIN, err = getPassPhase("PKCS11 PIN:")
+	}
+
+	return
+}
+
 // TODO(blacknon): ssh-agent用に、PrivateKeyのinterfaceを返す関数の作成

@@ -7,6 +7,8 @@ package sshlib
 import (
 	"fmt"
 	"io/ioutil"
+	"regexp"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -52,8 +54,46 @@ func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) 
 // CreateSignerPublicKeyPrompt rapper CreateSignerPKCS11.
 // Output a passphase input prompt if the passphase is not entered or incorrect.
 //
-// TODO(blacknon): Create
-// func CreateSignerPublicKeyPrompt() (signer ssh.Signer, err error) {}
+// Only Support UNIX-like OS.
+func CreateSignerPublicKeyPrompt(key, password string) (signer ssh.Signer, err error) {
+	// repeat count
+	rep := 3
+
+	// get absolute path
+	key = getAbsPath(key)
+
+	// Read PrivateKey file
+	keyData, err := ioutil.ReadFile(key)
+	if err != nil {
+		return
+	}
+
+	if password != "" { // password is not empty
+		signer, err = ssh.ParsePrivateKeyWithPassphrase(keyData, []byte(password))
+	} else { // password is empty
+		signer, err = ssh.ParsePrivateKey(keyData)
+
+		rgx := regexp.MustCompile(`cannot decode`)
+		if err != nil {
+			if rgx.MatchString(err.Error()) {
+				msg := key + "'s passphase:"
+
+				for i := 0; i < rep; i++ {
+					password, _ = getPassPhase(msg)
+					password = strings.TrimRight(password, "\n")
+					sshSigner, err := ssh.ParsePrivateKeyWithPassphrase(keyData, []byte(password))
+					signer = sshSigner
+					if err == nil {
+						break
+					}
+					fmt.Println("\n" + err.Error())
+				}
+			}
+		}
+	}
+
+	return
+}
 
 // CreateAuthMethodCertificate returns ssh.AuthMethod generated from Certificate.
 // To generate an AuthMethod from a certificate, you will need the certificate's private key Signer.
@@ -174,5 +214,57 @@ func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) 
 // CreateSignerPKCS11Prompt rapper CreateSignerPKCS11.
 // Output a PIN input prompt if the PIN is not entered or incorrect.
 //
-// TODO(blacknon): Create
-// func CreateSignerPKCS11Prompt() (signers []ssh.Signer, err error) {}
+// Only Support UNIX-like OS.
+func CreateSignerPKCS11Prompt(provider, pin string) (signers []ssh.Signer, err error) {
+	// get absolute path
+	provider = getAbsPath(provider)
+
+	// Create PKCS11 struct
+	p11 := new(PKCS11)
+	p11.Pkcs11Provider = provider
+	p11.PIN = pin
+
+	// Create pkcs11 ctx
+	err = p11.CreateCtx()
+	if err != nil {
+		return
+	}
+
+	// Get token label
+	err = p11.GetTokenLabel()
+	if err != nil {
+		return
+	}
+
+	// get PIN code
+	err = p11.GetPIN()
+	if err != nil {
+		return
+	}
+
+	// Recreate ctx (pkcs11=>crypto11)
+	err = p11.RecreateCtx(p11.Pkcs11Provider)
+	if err != nil {
+		return
+	}
+
+	// Get KeyID
+	err = p11.GetKeyID()
+	if err != nil {
+		return
+	}
+
+	// Get crypto.Signer
+	cryptoSigners, err := p11.GetCryptoSigner()
+	if err != nil {
+		return
+	}
+
+	// Exchange crypto.signer to ssh.Signer
+	for _, cryptoSigner := range cryptoSigners {
+		signer, _ := ssh.NewSignerFromSigner(cryptoSigner)
+		signers = append(signers, signer)
+	}
+
+	return
+}
