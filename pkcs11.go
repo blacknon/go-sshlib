@@ -2,6 +2,8 @@
 // Use of this source code is governed by an MIT license
 // that can be found in the LICENSE file.
 
+// TODO(blacknon): crypto11のバージョンがv0.1.0に依存しているため、v1.0.2に対応するように変更する。
+
 package sshlib
 
 import (
