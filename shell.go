@@ -17,13 +17,7 @@ import (
 )
 
 // Shell connect login shell over ssh.
-func (c *Connect) Shell() (err error) {
-	// Create session
-	session, err := c.CreateSession()
-	if err != nil {
-		return
-	}
-
+func (c *Connect) Shell(session *ssh.Session) (err error) {
 	// set FD
 	session.Stdin = os.Stdin
 	session.Stdout = os.Stdout
