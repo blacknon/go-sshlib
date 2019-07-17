@@ -17,6 +17,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// x11 request data struct
 type x11request struct {
 	SingleConnection bool
 	AuthProtocol     string

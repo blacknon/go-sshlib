@@ -53,7 +53,7 @@ func (c *Connect) Shell() (err error) {
 
 	// ssh agent forwarding
 	if c.ForwardAgent {
-		session = c.ForwardSshAgent(session)
+		c.ForwardSshAgent(session)
 	}
 
 	// x11 forwarding

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 // CreateAuthMethodPassword returns ssh.AuthMethod generated from password.
@@ -264,6 +265,19 @@ func CreateSignerPKCS11Prompt(provider, pin string) (signers []ssh.Signer, err e
 	for _, cryptoSigner := range cryptoSigners {
 		signer, _ := ssh.NewSignerFromSigner(cryptoSigner)
 		signers = append(signers, signer)
+	}
+
+	return
+}
+
+// CreateSignerAgent return []ssh.Signer from ssh-agent.
+// In sshAgent, put agent.Agent or agent.ExtendedAgent.
+func CreateSignerAgent(sshAgent interface{}) (signers []ssh.Signer, err error) {
+	switch ag := sshAgent.(type) {
+	case agent.Agent:
+		signers, err = ag.Signers()
+	case agent.ExtendedAgent:
+		signers, err = ag.Signers()
 	}
 
 	return

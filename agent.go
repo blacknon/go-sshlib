@@ -16,17 +16,19 @@ import (
 type AgentInterface interface{}
 
 // ConnectSshAgent
-func (c *Connect) ConnectSshAgent() {
+func ConnectSshAgent() (ag AgentInterface) {
 	// Get env "SSH_AUTH_SOCK" and connect.
 	sockPath := os.Getenv("SSH_AUTH_SOCK")
 	sock, err := net.Dial("unix", sockPath)
 
 	if err != nil {
-		c.agent = agent.NewKeyring()
+		ag = agent.NewKeyring()
 	} else {
 		// connect SSH_AUTH_SOCK
-		c.agent = agent.NewClient(sock)
+		ag = agent.NewClient(sock)
 	}
+
+	return
 }
 
 // AddKeySshAgent is rapper agent.Add().
@@ -34,14 +36,14 @@ func (c *Connect) ConnectSshAgent() {
 // *ecdsa.PrivateKey, which will be inserted into the agent.
 //
 // Should use `ssh.ParseRawPrivateKey()` or `ssh.ParseRawPrivateKeyWithPassphrase()`.
-func (c *Connect) AddKeySshAgent(key interface{}) {
+func (c *Connect) AddKeySshAgent(sshAgent interface{}, key interface{}) {
 	addedKey := agent.AddedKey{
 		PrivateKey:       key,
 		ConfirmBeforeUse: true,
 		LifetimeSecs:     3000,
 	}
 
-	switch ag := c.agent.(type) {
+	switch ag := sshAgent.(type) {
 	case agent.Agent:
 		ag.Add(addedKey)
 	case agent.ExtendedAgent:
@@ -50,9 +52,9 @@ func (c *Connect) AddKeySshAgent(key interface{}) {
 }
 
 // ForwardAgent forward ssh-agent in session.
-func (c *Connect) ForwardSshAgent(session *ssh.Session) *ssh.Session {
+func (c *Connect) ForwardSshAgent(session *ssh.Session) {
 	// forward ssh-agent
-	switch ag := c.agent.(type) {
+	switch ag := c.Agent.(type) {
 	case agent.Agent:
 		agent.ForwardToAgent(c.Client, ag)
 	case agent.ExtendedAgent:
@@ -60,6 +62,4 @@ func (c *Connect) ForwardSshAgent(session *ssh.Session) *ssh.Session {
 	}
 
 	agent.RequestAgentForwarding(session)
-
-	return session
 }

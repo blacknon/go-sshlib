@@ -24,7 +24,7 @@ func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Wr
 
 	// ssh agent forwarding
 	if c.ForwardAgent {
-		session = c.ForwardSshAgent(session)
+		c.ForwardSshAgent(session)
 	}
 
 	// x11 forwarding
@@ -70,7 +70,7 @@ func (c *Connect) Cmd(command string, output chan []byte) (err error) {
 
 	// ssh agent forwarding
 	if c.ForwardAgent {
-		session = c.ForwardSshAgent(session)
+		c.ForwardSshAgent(session)
 	}
 
 	// x11 forwarding
