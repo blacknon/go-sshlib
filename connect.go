@@ -36,7 +36,7 @@ type Connect struct {
 
 	// ssh-agent interface.
 	// agent.Agent or agent.ExtendedAgent
-	agent AgentInterface
+	Agent AgentInterface
 
 	// Forward x11 flag.
 	ForwardX11 bool
@@ -52,7 +52,7 @@ type Connect struct {
 }
 
 // CreateClient
-func (c *Connect) CreateClient(host, user, port string, authMethods []ssh.AuthMethod) (err error) {
+func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMethod) (err error) {
 	uri := net.JoinHostPort(host, port)
 
 	// Create new ssh.ClientConfig{}
