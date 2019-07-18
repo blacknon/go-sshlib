@@ -10,10 +10,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	sshlib "github.com/blacknon/go-sshlib"
 	"golang.org/x/crypto/ssh"
@@ -116,3 +118,4 @@ func main() {
 	fmt.Println("send2")
 
 	fmt.Println("Run Command Exit")
+}
