@@ -33,7 +33,7 @@ func (c *Connect) Shell(session *ssh.Session) (err error) {
 
 	// Logging
 	if c.logging {
-		session, err = c.logger(session)
+		err = c.logger(session)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -84,10 +84,10 @@ func (c *Connect) SetLog(path string, timestamp bool) {
 }
 
 // logger is logging terminal log to c.logFile
-func (c *Connect) logger(session *ssh.Session) (*ssh.Session, error) {
+func (c *Connect) logger(session *ssh.Session) (err error) {
 	logfile, err := os.OpenFile(c.logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
 	if err != nil {
-		return session, err
+		return
 	}
 
 	if c.logTimestamp {
@@ -120,5 +120,5 @@ func (c *Connect) logger(session *ssh.Session) (*ssh.Session, error) {
 		session.Stderr = io.MultiWriter(session.Stderr, logfile)
 	}
 
-	return session, err
+	return err
 }
