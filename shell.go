@@ -93,10 +93,10 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 	if c.logging {
 		err = c.logger(session)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
-		err = nil
 	}
+	err = nil
 
 	// Request tty
 	err = RequestTty(session)
@@ -108,10 +108,10 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 	if c.ForwardX11 {
 		err = c.X11Forward(session)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
-		err = nil
 	}
+	err = nil
 
 	// ssh agent forwarding
 	if c.ForwardAgent {
