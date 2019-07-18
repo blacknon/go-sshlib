@@ -100,12 +100,7 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 	// Request tty
 	err = RequestTty(session)
 	if err != nil {
-		return
-	}
-
-	// ssh agent forwarding
-	if c.ForwardAgent {
-		c.ForwardSshAgent(session)
+		return err
 	}
 
 	// x11 forwarding
@@ -114,6 +109,11 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	// ssh agent forwarding
+	if c.ForwardAgent {
+		c.ForwardSshAgent(session)
 	}
 
 	return
