@@ -93,6 +93,9 @@ func CreateSignerPublicKeyPrompt(key, password string) (signer ssh.Signer, err e
 		}
 	}
 
+	// set err in nil
+	err = nil
+
 	return
 }
 

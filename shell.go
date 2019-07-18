@@ -18,11 +18,6 @@ import (
 
 // Shell connect login shell over ssh.
 func (c *Connect) Shell(session *ssh.Session) (err error) {
-	// set FD
-	session.Stdin = os.Stdin
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-
 	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
 	state, err := terminal.MakeRaw(fd)
@@ -30,6 +25,69 @@ func (c *Connect) Shell(session *ssh.Session) (err error) {
 		return
 	}
 	defer terminal.Restore(fd, state)
+
+	// setup
+	err = c.setupShell(session)
+	if err != nil {
+		return
+	}
+
+	// Start shell
+	err = session.Shell()
+	if err != nil {
+		return
+	}
+
+	// keep alive packet
+	go c.SendKeepAlive(session)
+
+	err = session.Wait()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+// Shell connect command shell over ssh.
+// Used to start a shell with a specified command.
+func (c *Connect) CmdShell(session *ssh.Session, command string) (err error) {
+	// Input terminal Make raw
+	fd := int(os.Stdin.Fd())
+	state, err := terminal.MakeRaw(fd)
+	if err != nil {
+		return
+	}
+	defer terminal.Restore(fd, state)
+
+	// setup
+	err = c.setupShell(session)
+	if err != nil {
+		return
+	}
+
+	// Start shell
+	err = session.Start(command)
+	if err != nil {
+		return
+	}
+
+	// keep alive packet
+	go c.SendKeepAlive(session)
+
+	err = session.Wait()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (c *Connect) setupShell(session *ssh.Session) (err error) {
+	// set FD
+	session.Stdin = os.Stdin
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
 
 	// Logging
 	if c.logging {
@@ -56,20 +114,6 @@ func (c *Connect) Shell(session *ssh.Session) (err error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-
-	// Start shell
-	err = session.Shell()
-	if err != nil {
-		return
-	}
-
-	// keep alive packet
-	go c.SendKeepAlive(session)
-
-	err = session.Wait()
-	if err != nil {
-		return
 	}
 
 	return
