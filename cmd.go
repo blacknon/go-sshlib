@@ -10,6 +10,8 @@ import (
 	"log"
 	"os"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // CmdWriter connect and run command over ssh.
@@ -22,17 +24,10 @@ func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Wr
 		return
 	}
 
-	// ssh agent forwarding
-	if c.ForwardAgent {
-		c.ForwardSshAgent(session)
-	}
-
-	// x11 forwarding
-	if c.ForwardX11 {
-		err = c.X11Forward(session)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// setup
+	err = c.setupCmd(session)
+	if err != nil {
+		return
 	}
 
 	// if set Stdin,
@@ -68,17 +63,10 @@ func (c *Connect) Cmd(command string, output chan []byte) (err error) {
 		return
 	}
 
-	// ssh agent forwarding
-	if c.ForwardAgent {
-		c.ForwardSshAgent(session)
-	}
-
-	// x11 forwarding
-	if c.ForwardX11 {
-		err = c.X11Forward(session)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// setup
+	err = c.setupCmd(session)
+	if err != nil {
+		return
 	}
 
 	// if set Stdin,
@@ -102,6 +90,33 @@ func (c *Connect) Cmd(command string, output chan []byte) (err error) {
 
 	// Send output channel
 	sendCmdOutput(buf, output, isExit)
+
+	return
+}
+
+//
+func (c *Connect) setupCmd(session *ssh.Session) (err error) {
+	// Request tty
+	if c.TTY {
+		err = RequestTty(session)
+		if err != nil {
+			return err
+		}
+	}
+
+	// ssh agent forwarding
+	if c.ForwardAgent {
+		c.ForwardSshAgent(session)
+	}
+
+	// x11 forwarding
+	if c.ForwardX11 {
+		err = c.X11Forward(session)
+		if err != nil {
+			log.Println(err)
+		}
+		err = nil
+	}
 
 	return
 }
