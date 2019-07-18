@@ -95,6 +95,7 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		err = nil
 	}
 
 	// Request tty
@@ -109,6 +110,7 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		err = nil
 	}
 
 	// ssh agent forwarding
