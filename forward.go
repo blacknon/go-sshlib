@@ -34,7 +34,7 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	display := getX11Display()
 
 	_, xAuth, err := readAuthority("", display)
-	if err != io.EOF {
+	if err != io.EOF && err != nil {
 		return
 	}
 
@@ -71,7 +71,7 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 		}()
 	}
 
-	return
+	return err
 }
 
 // x11Connect return net.Conn x11 socket.
