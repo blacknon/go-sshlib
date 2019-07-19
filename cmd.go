@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // CmdWriter connect and run command over ssh.
@@ -78,8 +79,19 @@ func (c *Connect) Cmd(command string, output chan []byte) (err error) {
 
 	// Set output buffer
 	buf := new(bytes.Buffer)
+
+	// set output
 	session.Stdout = io.MultiWriter(buf)
 	session.Stderr = io.MultiWriter(buf)
+	if c.ForceStd {
+		// Input terminal Make raw
+		fd := int(os.Stdin.Fd())
+		state, _ := terminal.MakeRaw(fd)
+		defer terminal.Restore(fd, state)
+
+		session.Stdout = os.Stdout
+		session.Stderr = os.Stderr
+	}
 
 	// Run Command
 	isExit := make(chan bool)

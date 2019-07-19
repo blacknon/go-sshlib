@@ -233,7 +233,7 @@ func getString(r io.Reader, b []byte) (string, error) {
 	return string(b), nil
 }
 
-// TCPForward forwarding tcp data.
+// TCPLocalForward forwarding tcp data. Like Local port forward.
 // localAddr, remoteAddr is write as "address:port".
 //
 // example) "127.0.0.1:22", "abc.com:9977"
