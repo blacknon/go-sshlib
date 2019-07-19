@@ -237,7 +237,7 @@ func getString(r io.Reader, b []byte) (string, error) {
 // localAddr, remoteAddr is write as "address:port".
 //
 // example) "127.0.0.1:22", "abc.com:9977"
-func (c *Connect) TCPForward(localAddr, remoteAddr string) (err error) {
+func (c *Connect) TCPLocalForward(localAddr, remoteAddr string) (err error) {
 	listner, err := net.Listen("tcp", localAddr)
 	if err != nil {
 		return
