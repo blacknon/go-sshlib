@@ -34,6 +34,11 @@ type Connect struct {
 	// Forward ssh agent flag.
 	ForwardAgent bool
 
+	// ForceStd used by Cmd().
+	// If this value is enabled, the output destinations of session.Stdout
+	// and session.Stderr will be set to os.Stdout and os.Stderr respectively
+	ForceStd bool
+
 	// ssh-agent interface.
 	// agent.Agent or agent.ExtendedAgent
 	Agent AgentInterface
