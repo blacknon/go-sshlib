@@ -82,19 +82,15 @@ func CreateSignerPublicKeyPrompt(key, password string) (signer ssh.Signer, err e
 				for i := 0; i < rep; i++ {
 					password, _ = getPassPhase(msg)
 					password = strings.TrimRight(password, "\n")
-					sshSigner, err := ssh.ParsePrivateKeyWithPassphrase(keyData, []byte(password))
-					signer = sshSigner
+					signer, err = ssh.ParsePrivateKeyWithPassphrase(keyData, []byte(password))
 					if err == nil {
-						break
+						return
 					}
 					fmt.Println("\n" + err.Error())
 				}
 			}
 		}
 	}
-
-	// set err in nil
-	err = nil
 
 	return
 }
