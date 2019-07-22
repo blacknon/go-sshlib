@@ -19,32 +19,40 @@ import (
 // In order to be able to send in parallel from io.MultiWriter, it is made to receive Writer by channel.
 func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Writer) (err error) {
 	// create session
-	session, err := c.CreateSession()
-	if err != nil {
-		close(output)
-		return
+	if c.session == nil {
+		c.session, err = c.CreateSession()
+		if err != nil {
+			close(output)
+			return
+		}
 	}
 
 	// setup
-	err = c.setupCmd(session)
+	err = c.setupCmd(c.session)
 	if err != nil {
 		return
 	}
 
 	// if set Stdin,
-	writer, _ := session.StdinPipe()
+	writer, _ := c.session.StdinPipe()
 	input <- writer
 	defer writer.Close()
 
 	// Set output buffer
 	buf := new(bytes.Buffer)
-	session.Stdout = io.MultiWriter(buf)
-	session.Stderr = io.MultiWriter(buf)
+	c.session.Stdout = io.MultiWriter(buf)
+	c.session.Stderr = io.MultiWriter(buf)
 
-	// Run Command
+	// make exit channel
 	isExit := make(chan bool)
+
+	// Run command
+	c.session.Start(command)
+
+	// check exit
 	go func() {
-		session.Run(command)
+		c.session.Wait()
+		c.session = nil
 		isExit <- true
 	}()
 
@@ -133,8 +141,52 @@ func (c *Connect) setupCmd(session *ssh.Session) (err error) {
 	return
 }
 
+// Kill c.session close.
+// Only work c.CmdWriter().
+func (c *Connect) Kill() {
+	c.session.Signal(ssh.SIGINT)
+	c.session.Close()
+}
+
 // sendCmdOutput send to output channel.
 func sendCmdOutput(buf *bytes.Buffer, output chan []byte, isExit <-chan bool) {
+	// 	// line
+	// 	var line []byte
+
+	// 	// exit flag
+	// 	exit := false
+
+	// 	// Send output channel
+	// GetOutputLoop:
+	// 	for {
+	// 		// buffer
+	// 		b := make([]byte, 1024)
+
+	// 		// read buffer
+	// 		size, err := buf.Read(b)
+	// 		if size > 0 {
+	// 			line = append(line, b[:size]...)
+	// 		}
+
+	// 		// send output
+	// 		if err == io.EOF && len(line) > 0 {
+	// 			output <- line
+	// 			line = []byte{}
+	// 		} else {
+	// 			select {
+	// 			case <-isExit:
+	// 				exit = true
+	// 				continue
+	// 			case <-time.After(100 * time.Millisecond):
+	// 				if exit {
+	// 					break GetOutputLoop
+	// 				} else {
+	// 					continue GetOutputLoop
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+
 	// Send output channel
 GetOutputLoop:
 	for {
@@ -151,16 +203,19 @@ GetOutputLoop:
 		}
 	}
 
-	// last check
-	if buf.Len() > 0 {
-		for {
-			line, err := buf.ReadBytes('\n')
-			if err != io.EOF {
+	// buffer
+	var line []byte
+	for {
+		b := make([]byte, 4096)
+		size, err := buf.Read(b)
+		if size > 0 {
+			line = append(line, b[:size]...)
+		}
+		if err == io.EOF {
+			if len(line) > 0 {
 				output <- line
-			} else {
-				break
 			}
+			break
 		}
 	}
-
 }
