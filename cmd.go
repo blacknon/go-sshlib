@@ -6,7 +6,6 @@ package sshlib
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -50,20 +49,13 @@ func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Wr
 	// Run command
 	c.session.Start(command)
 
-	// check exit
-	// go func() {
-	// c.session.Wait()
-	// c.session = nil
-	// isExit <- true
-	// }()
-
 	// Send output channel
 	go sendCmdOutput(buf, output, isExit)
 
+	// Run command wait
 	c.session.Wait()
 	c.session = nil
 	isExit <- true
-	fmt.Println(66666)
 
 	return
 }
