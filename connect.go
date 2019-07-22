@@ -21,6 +21,9 @@ type Connect struct {
 	// Client *ssh.Client
 	Client *ssh.Client
 
+	// Session (only use CmdWriter())
+	session *ssh.Session
+
 	// ProxyDialer
 	ProxyDialer proxy.Dialer
 
