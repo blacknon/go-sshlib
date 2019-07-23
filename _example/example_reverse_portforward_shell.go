@@ -22,8 +22,8 @@ var (
 	port       = "22"
 	user       = "user"
 	password   = "password"
-	localAddr  = "localhost:10022"
-	remoteAddr = "localhost:22"
+	localAddr  = "localhost:80"
+	remoteAddr = "localhost:8080"
 
 	termlog = "./test_termlog"
 )
@@ -43,7 +43,7 @@ func main() {
 	}
 
 	// PortForward
-	con.TCPLocalForward(localAddr, remoteAddr)
+	con.TCPReverseForward(localAddr, remoteAddr)
 
 	// Set terminal log
 	con.SetLog(termlog, false)
