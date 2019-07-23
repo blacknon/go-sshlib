@@ -53,6 +53,13 @@ func main() {
 	// Set terminal log
 	con.SetLog(termlog, false)
 
+	// Create Session
+	session, err := targetCon.CreateSession()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	// Start ssh shell
-	con.Shell()
+	con.Shell(session)
 }
