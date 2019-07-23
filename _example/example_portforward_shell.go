@@ -36,10 +36,10 @@ func main() {
 	authMethod := sshlib.CreateAuthMethodPassword(password)
 
 	// PortForward
-	con.TCPForward(localAddr, remoteAddr)
+	con.TCPLocalForward(localAddr, remoteAddr)
 
 	// Connect ssh server
-	err := con.CreateClient(host, user, port, []ssh.AuthMethod{authMethod})
+	err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod})
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -48,6 +48,13 @@ func main() {
 	// Set terminal log
 	con.SetLog(termlog, false)
 
+	// Create session
+	session, err := con.CreateSession()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	// Start ssh shell
-	con.Shell()
+	con.Shell(session)
 }
