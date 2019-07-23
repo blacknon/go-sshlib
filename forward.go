@@ -265,7 +265,9 @@ func (c *Connect) TCPLocalForward(localAddr, remoteAddr string) (err error) {
 }
 
 // TCPReverseForward forwarding tcp data. Like Reverse port forward (ssh -R).
+// localAddr, remoteAddr is write as "address:port".
 //
+// example) "127.0.0.1:22", "abc.com:9977"
 func (c *Connect) TCPReverseForward(localAddr, remoteAddr string) (err error) {
 	// create listner
 	listner, err := c.Client.Listen("tcp", remoteAddr)
