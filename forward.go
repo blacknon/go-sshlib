@@ -323,6 +323,10 @@ func (c *Connect) forwarder(local net.Conn, remote net.Conn) {
 // TCPSocks5DynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D).
 //
 // func (c *Connect) TCPSocks5DynamicForward() (err error) {}
+// NOTE: 参考
+//     - https://github.com/ring04h/s5.go
+//     - https://github.com/davecheney/socksie
+//     - https://github.com/justmao945/mallory
 
 // TCPHttpDynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D),
 // but http proxy.
