@@ -290,7 +290,7 @@ func (c *Connect) TCPRemoteForward(localAddr, remoteAddr string) (err error) {
 				return
 			}
 
-			go c.forwarder(local, remote)
+			c.forwarder(local, remote)
 		}
 	}()
 
@@ -324,6 +324,7 @@ func (c *Connect) forwarder(local net.Conn, remote net.Conn) {
 //
 // func (c *Connect) TCPSocks5DynamicForward() (err error) {}
 // NOTE: 参考
+//     - https://github.com/armon/go-socks5
 //     - https://github.com/ring04h/s5.go
 //     - https://github.com/davecheney/socksie
 //     - https://github.com/justmao945/mallory
