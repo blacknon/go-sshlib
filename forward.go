@@ -11,13 +11,11 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"strings"
 	"sync"
 
 	"github.com/armon/go-socks5"
-	"github.com/elazarl/goproxy"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -331,9 +329,9 @@ func (socks5Resolver) Resolve(ctx context.Context, name string) (context.Context
 	return ctx, nil, nil
 }
 
-// TCPSocks5DynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D).
-//
-func (c *Connect) TCPSocks5DynamicForward(address, port string) (err error) {
+// TCPDynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D).
+// listen port Socks5 proxy server.
+func (c *Connect) TCPDynamicForward(address, port string) (err error) {
 	// Create Socks5 config
 	conf := &socks5.Config{
 		Dial: func(ctx context.Context, n, addr string) (net.Conn, error) {
@@ -350,26 +348,6 @@ func (c *Connect) TCPSocks5DynamicForward(address, port string) (err error) {
 
 	// Listen
 	err = s.ListenAndServe("tcp", net.JoinHostPort(address, port))
-
-	return
-}
-
-// TCPHttpDynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D),
-// but this function serve http proxy.
-//
-// NOTE: 参考
-//     - https://github.com/armon/go-socks5
-//     - https://github.com/ring04h/s5.go
-//     - https://github.com/davecheney/socksie
-//     - https://github.com/justmao945/mallory
-func (c *Connect) TCPHttpDynamicForward(address, port string) (err error) {
-	// crete goproxy struct
-	p := goproxy.NewProxyHttpServer()
-	p.ConnectDial = func(n string, addr string) (net.Conn, error) {
-		return c.Client.Dial(n, addr)
-	}
-
-	err = http.ListenAndServe(net.JoinHostPort(address, port), p)
 
 	return
 }
