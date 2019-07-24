@@ -11,11 +11,13 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
 
 	"github.com/armon/go-socks5"
+	"github.com/elazarl/goproxy"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -360,4 +362,14 @@ func (c *Connect) TCPSocks5DynamicForward(address, port string) (err error) {
 //     - https://github.com/ring04h/s5.go
 //     - https://github.com/davecheney/socksie
 //     - https://github.com/justmao945/mallory
-// func (c *Connect) TCPHttpDynamicForward() (err error) {}
+func (c *Connect) TCPHttpDynamicForward(address, port string) (err error) {
+	// crete goproxy struct
+	p := goproxy.NewProxyHttpServer()
+	p.ConnectDial = func(n string, addr string) (net.Conn, error) {
+		return c.Client.Dial(n, addr)
+	}
+
+	err = http.ListenAndServe(net.JoinHostPort(address, port), p)
+
+	return
+}
