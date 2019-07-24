@@ -5,6 +5,7 @@
 package sshlib
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/armon/go-socks5"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -320,16 +322,42 @@ func (c *Connect) forwarder(local net.Conn, remote net.Conn) {
 	local.Close()
 }
 
+// socks5Resolver prevents DNS from resolving on the local machine, rather than over the SSH connection.
+type socks5Resolver struct{}
+
+func (socks5Resolver) Resolve(ctx context.Context, name string) (context.Context, net.IP, error) {
+	return ctx, nil, nil
+}
+
 // TCPSocks5DynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D).
 //
-// func (c *Connect) TCPSocks5DynamicForward() (err error) {}
+func (c *Connect) TCPSocks5DynamicForward(address, port string) (err error) {
+	// Create Socks5 config
+	conf := &socks5.Config{
+		Dial: func(ctx context.Context, n, addr string) (net.Conn, error) {
+			return c.Client.Dial(n, addr)
+		},
+		Resolver: socks5Resolver{},
+	}
+
+	// Create Socks5 server
+	s, err := socks5.New(conf)
+	if err != nil {
+		return
+	}
+
+	// Listen
+	err = s.ListenAndServe("tcp", net.JoinHostPort(address, port))
+
+	return
+}
+
+// TCPHttpDynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D),
+// but this function serve http proxy.
+//
 // NOTE: 参考
 //     - https://github.com/armon/go-socks5
 //     - https://github.com/ring04h/s5.go
 //     - https://github.com/davecheney/socksie
 //     - https://github.com/justmao945/mallory
-
-// TCPHttpDynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D),
-// but http proxy.
-//
 // func (c *Connect) TCPHttpDynamicForward() (err error) {}

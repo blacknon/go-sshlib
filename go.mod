@@ -2,6 +2,7 @@ module github.com/blacknon/go-sshlib
 
 require (
 	github.com/ThalesIgnite/crypto11 v0.1.0
+	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/blacknon/lssh v0.5.6
 	github.com/miekg/pkcs11 v1.0.2
 	golang.org/x/crypto v0.0.0-20190418165655-df01cb2cc480
