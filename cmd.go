@@ -46,13 +46,11 @@ func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Wr
 	// make exit channel
 	isExit := make(chan bool)
 
-	// Run command
-	c.session.Start(command)
-
 	// Send output channel
 	go sendCmdOutput(buf, output, isExit)
 
-	// Run command wait
+	// Run command
+	c.session.Start(command)
 	c.session.Wait()
 	isExit <- true
 
