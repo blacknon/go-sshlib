@@ -33,12 +33,13 @@ func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Wr
 		return
 	}
 
-	// if set Stdin,
+	// if set Stdin
 	writer, _ := c.session.StdinPipe()
 	input <- writer
 	defer writer.Close()
 
 	// Set output buffer
+	// TODO(blacknon): bufferは可能な限り使わず、Readerを渡すようにしたい
 	buf := new(bytes.Buffer)
 	c.session.Stdout = io.MultiWriter(buf)
 	c.session.Stderr = io.MultiWriter(buf)
@@ -88,6 +89,7 @@ func (c *Connect) Cmd(command string, output chan []byte) (err error) {
 	buf := new(bytes.Buffer)
 
 	// set output
+	// TODO(blacknon): bufferは可能な限り使わず、Readerを渡すようにしたい
 	c.session.Stdout = io.MultiWriter(buf)
 	c.session.Stderr = io.MultiWriter(buf)
 	if c.ForceStd {
@@ -149,6 +151,7 @@ func (c *Connect) Kill() {
 
 // sendCmdOutput send to output channel.
 func sendCmdOutput(buf *bytes.Buffer, output chan []byte, isExit <-chan bool) {
+	// TODO(blacknon): bufferは使わず、Readerを渡すようにしたい
 	exit := false
 
 GetOutputLoop:
