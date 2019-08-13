@@ -17,7 +17,7 @@ import (
 
 // CmdWriter connect and run command over ssh.
 // In order to be able to send in parallel from io.MultiWriter, it is made to receive Writer by channel.
-func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Writer) (err error) {
+func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.WriteCloser) (err error) {
 	// create session
 	if c.session == nil {
 		c.session, err = c.CreateSession()
