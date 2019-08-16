@@ -35,7 +35,7 @@ type Connect struct {
 
 	// Stdin to be passed to ssh connection destination.
 	// If the value is set here, it is treated as passed from the pipe.
-	// TODO(blacknon): Readerに切り替えたら削除
+	// TODO(blacknon): Readerに切り替え
 	Stdin []byte
 
 	// Forward ssh agent flag.
