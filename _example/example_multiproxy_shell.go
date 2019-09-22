@@ -74,7 +74,7 @@ func main() {
 	// ==========
 
 	// Create target sshlib.Connect
-	con := &sshlib.Connect{
+	targetCon := &sshlib.Connect{
 		ProxyDialer: socks5ProxyDialer,
 	}
 
@@ -91,6 +91,13 @@ func main() {
 	// Set terminal log
 	targetCon.SetLog(termlog, false)
 
+	// Create Session
+	session, err := targetCon.CreateSession()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	// Start ssh shell
-	targetCon.Shell()
+	targetCon.Shell(err)
 }

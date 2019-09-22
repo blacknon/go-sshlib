@@ -5,135 +5,82 @@
 package sshlib
 
 import (
-	"bytes"
 	"io"
 	"log"
 	"os"
-	"time"
+
+	"golang.org/x/crypto/ssh"
 )
-
-// CmdWriter connect and run command over ssh.
-// In order to be able to send in parallel from io.MultiWriter, it is made to receive Writer by channel.
-func (c *Connect) CmdWriter(command string, output chan []byte, input chan io.Writer) (err error) {
-	// create session
-	session, err := c.CreateSession()
-	if err != nil {
-		close(output)
-		return
-	}
-
-	// ssh agent forwarding
-	if c.ForwardAgent {
-		session = c.ForwardSshAgent(session)
-	}
-
-	// x11 forwarding
-	if c.ForwardX11 {
-		err = c.X11Forward(session)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// if set Stdin,
-	writer, _ := session.StdinPipe()
-	input <- writer
-	defer writer.Close()
-
-	// Set output buffer
-	buf := new(bytes.Buffer)
-	session.Stdout = io.MultiWriter(buf)
-	session.Stderr = io.MultiWriter(buf)
-
-	// Run Command
-	isExit := make(chan bool)
-	go func() {
-		session.Run(command)
-		isExit <- true
-	}()
-
-	// Send output channel
-	sendCmdOutput(buf, output, isExit)
-
-	return
-}
 
 // Cmd connect and run command over ssh.
 // Output data is processed by channel because it is executed in parallel. If specification is troublesome, it is good to generate and process session from ssh package.
-func (c *Connect) Cmd(command string, output chan []byte) (err error) {
+func (c *Connect) Command(command string) (err error) {
 	// create session
-	session, err := c.CreateSession()
+	if c.Session == nil {
+		c.Session, err = c.CreateSession()
+		if err != nil {
+			return
+		}
+	}
+	defer func() { c.Session = nil }()
+
+	// setup options
+	err = c.setOption(c.Session)
 	if err != nil {
-		close(output)
 		return
+	}
+
+	// Set Stdin, Stdout, Stderr...
+	if c.Stdin != nil {
+		w, _ := c.Session.StdinPipe()
+		go io.Copy(w, c.Stdin)
+	} else {
+		c.Session.Stdin = os.Stdin
+	}
+
+	if c.Stdout != nil {
+		or, _ := c.Session.StdoutPipe()
+		go io.Copy(c.Stdout, or)
+	} else {
+		c.Session.Stdout = os.Stdout
+	}
+
+	if c.Stderr != nil {
+		er, _ := c.Session.StderrPipe()
+		go io.Copy(c.Stderr, er)
+	} else {
+		c.Session.Stderr = os.Stderr
+	}
+
+	// Run Command
+	c.Session.Run(command)
+
+	return
+}
+
+//
+func (c *Connect) setOption(session *ssh.Session) (err error) {
+	// Request tty
+	if c.TTY {
+		err = RequestTty(session)
+		if err != nil {
+			return err
+		}
 	}
 
 	// ssh agent forwarding
 	if c.ForwardAgent {
-		session = c.ForwardSshAgent(session)
+		c.ForwardSshAgent(session)
 	}
 
 	// x11 forwarding
 	if c.ForwardX11 {
 		err = c.X11Forward(session)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
+		err = nil
 	}
-
-	// if set Stdin,
-	if len(c.Stdin) > 0 {
-		session.Stdin = bytes.NewReader(c.Stdin)
-	} else {
-		session.Stdin = os.Stdin
-	}
-
-	// Set output buffer
-	buf := new(bytes.Buffer)
-	session.Stdout = io.MultiWriter(buf)
-	session.Stderr = io.MultiWriter(buf)
-
-	// Run Command
-	isExit := make(chan bool)
-	go func() {
-		session.Run(command)
-		isExit <- true
-	}()
-
-	// Send output channel
-	sendCmdOutput(buf, output, isExit)
 
 	return
-}
-
-// sendCmdOutput send to output channel.
-func sendCmdOutput(buf *bytes.Buffer, output chan []byte, isExit <-chan bool) {
-	// Send output channel
-GetOutputLoop:
-	for {
-		if buf.Len() > 0 {
-			line, _ := buf.ReadBytes('\n')
-			output <- line
-		} else {
-			select {
-			case <-isExit:
-				break GetOutputLoop
-			case <-time.After(10 * time.Millisecond):
-				continue GetOutputLoop
-			}
-		}
-	}
-
-	// last check
-	if buf.Len() > 0 {
-		for {
-			line, err := buf.ReadBytes('\n')
-			if err != io.EOF {
-				output <- line
-			} else {
-				break
-			}
-		}
-	}
-
 }
