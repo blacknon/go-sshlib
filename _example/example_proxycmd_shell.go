@@ -21,52 +21,41 @@ import (
 
 var (
 	// Proxy ssh server
-	host1     = "proxy.com"
-	port1     = "22"
-	user1     = "user"
-	password1 = "password"
-
-	// Target ssh server
-	host2     = "target.com"
-	port2     = "22"
-	user2     = "user"
-	password2 = "password"
+	host         = "proxy.com"
+	port         = "22"
+	user         = "user"
+	password     = "password"
+	proxyCommand = "ssh -W %h:%p ProxyServer"
 
 	termlog = "./test_termlog"
 )
 
 func main() {
 	// ==========
-	// proxy connect
+	// proxy
 	// ==========
 
-	// Create proxy sshlib.Connect
-	proxyCon := &sshlib.Connect{}
+	p := &sshlib.Proxy{
+		Type:    command,
+		Command: proxyCommand,
+	}
 
-	// Create proxy ssh.AuthMethod
-	proxyAuthMethod := sshlib.CreateAuthMethodPassword(password1)
-
-	// Connect proxy server
-	err := proxyCon.CreateClient(host1, user1, port1, []ssh.AuthMethod{proxyAuthMethod})
+	dialer, err := p.CreateProxyDialer()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// ==========
-	// target connect
-	// ==========
-
 	// Create target sshlib.Connect
 	targetCon := &sshlib.Connect{
-		ProxyDialer: proxyCon.Client,
+		ProxyDialer: dialer,
 	}
 
 	// Create target ssh.AuthMethod
-	targetAuthMethod := sshlib.CreateAuthMethodPassword(password2)
+	targetAuthMethod := sshlib.CreateAuthMethodPassword(password1)
 
 	// Connect target server
-	err = targetCon.CreateClient(host2, user2, port2, []ssh.AuthMethod{targetAuthMethod})
+	err = targetCon.CreateClient(host1, user1, port1, []ssh.AuthMethod{targetAuthMethod})
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
