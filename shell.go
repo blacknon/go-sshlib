@@ -17,18 +17,7 @@ import (
 )
 
 // Shell connect login shell over ssh.
-func (c *Connect) Shell() (err error) {
-	// Create session
-	session, err := c.CreateSession()
-	if err != nil {
-		return
-	}
-
-	// set FD
-	session.Stdin = os.Stdin
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-
+func (c *Connect) Shell(session *ssh.Session) (err error) {
 	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
 	state, err := terminal.MakeRaw(fd)
@@ -37,31 +26,10 @@ func (c *Connect) Shell() (err error) {
 	}
 	defer terminal.Restore(fd, state)
 
-	// Logging
-	if c.logging {
-		session, err = c.logger(session)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// Request tty
-	err = RequestTty(session)
+	// setup
+	err = c.setupShell(session)
 	if err != nil {
 		return
-	}
-
-	// ssh agent forwarding
-	if c.ForwardAgent {
-		session = c.ForwardSshAgent(session)
-	}
-
-	// x11 forwarding
-	if c.ForwardX11 {
-		err = c.X11Forward(session)
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	// Start shell
@@ -81,6 +49,78 @@ func (c *Connect) Shell() (err error) {
 	return
 }
 
+// Shell connect command shell over ssh.
+// Used to start a shell with a specified command.
+func (c *Connect) CmdShell(session *ssh.Session, command string) (err error) {
+	// Input terminal Make raw
+	fd := int(os.Stdin.Fd())
+	state, err := terminal.MakeRaw(fd)
+	if err != nil {
+		return
+	}
+	defer terminal.Restore(fd, state)
+
+	// setup
+	err = c.setupShell(session)
+	if err != nil {
+		return
+	}
+
+	// Start shell
+	err = session.Start(command)
+	if err != nil {
+		return
+	}
+
+	// keep alive packet
+	go c.SendKeepAlive(session)
+
+	err = session.Wait()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (c *Connect) setupShell(session *ssh.Session) (err error) {
+	// set FD
+	session.Stdin = os.Stdin
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
+
+	// Logging
+	if c.logging {
+		err = c.logger(session)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	err = nil
+
+	// Request tty
+	err = RequestTty(session)
+	if err != nil {
+		return err
+	}
+
+	// x11 forwarding
+	if c.ForwardX11 {
+		err = c.X11Forward(session)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	err = nil
+
+	// ssh agent forwarding
+	if c.ForwardAgent {
+		c.ForwardSshAgent(session)
+	}
+
+	return
+}
+
 // SetLog set up terminal log logging.
 // This only happens in Connect.Shell().
 func (c *Connect) SetLog(path string, timestamp bool) {
@@ -90,10 +130,11 @@ func (c *Connect) SetLog(path string, timestamp bool) {
 }
 
 // logger is logging terminal log to c.logFile
-func (c *Connect) logger(session *ssh.Session) (*ssh.Session, error) {
+// TODO(blacknon): Writerを利用した処理方法に変更する(v0.1.1)
+func (c *Connect) logger(session *ssh.Session) (err error) {
 	logfile, err := os.OpenFile(c.logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
 	if err != nil {
-		return session, err
+		return
 	}
 
 	if c.logTimestamp {
@@ -126,5 +167,5 @@ func (c *Connect) logger(session *ssh.Session) (*ssh.Session, error) {
 		session.Stderr = io.MultiWriter(session.Stderr, logfile)
 	}
 
-	return session, err
+	return err
 }

@@ -114,37 +114,37 @@ func (p *Proxy) CreateSocks5ProxyDialer() (proxyDialer proxy.Dialer, err error) 
 // When passing ProxyCommand, replace %h, %p and %r etc...
 //
 func (p *Proxy) CreateProxyCommandProxyDialer() (proxyDialer proxy.Dialer, err error) {
-	// Create net.Pipe(), and set proxyCommand
-	cli, srv := net.Pipe()
-
-	cmd := exec.Command("sh", "-c", p.Command)
-
-	// setup FD
-	cmd.Stdin = srv
-	cmd.Stdout = cli
-	cmd.Stderr = os.Stderr
-
-	// run proxyCommand
-	err = cmd.Start()
-	if err != nil {
-		return
-	}
-
-	proxyDialer = new(NetPipe)
+	np := new(NetPipe)
+	np.Command = p.Command
+	proxyDialer = np
 
 	return
 }
 
 //
 type NetPipe struct {
-	PipeClient net.Conn
+	Command string
 }
 
 //
-func (n *NetPipe) Dial(network, addr string) (net.Conn, error) {
+func (n *NetPipe) Dial(network, addr string) (con net.Conn, err error) {
 	network = ""
 	addr = ""
-	return n.PipeClient, nil
+
+	// Create net.Pipe(), and set proxyCommand
+	con, srv := net.Pipe()
+
+	cmd := exec.Command("sh", "-c", n.Command)
+
+	// setup FD
+	cmd.Stdin = srv
+	cmd.Stdout = srv
+	cmd.Stderr = os.Stderr
+
+	// run proxyCommand
+	err = cmd.Start()
+
+	return
 }
 
 //

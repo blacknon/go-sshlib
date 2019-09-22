@@ -5,6 +5,7 @@
 package sshlib
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -14,10 +15,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/armon/go-socks5"
 	"golang.org/x/crypto/ssh"
 )
 
-type x11request struct {
+// x11 request data struct
+type x11Request struct {
 	SingleConnection bool
 	AuthProtocol     string
 	AuthCookie       string
@@ -33,7 +36,7 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	display := getX11Display()
 
 	_, xAuth, err := readAuthority("", display)
-	if err != io.EOF {
+	if err != io.EOF && err != nil {
 		return
 	}
 
@@ -43,7 +46,7 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	}
 
 	// set x11-req Payload
-	payload := x11request{
+	payload := x11Request{
 		SingleConnection: false,
 		AuthProtocol:     string("MIT-MAGIC-COOKIE-1"),
 		AuthCookie:       string(cookie),
@@ -70,7 +73,7 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 		}()
 	}
 
-	return
+	return err
 }
 
 // x11Connect return net.Conn x11 socket.
@@ -232,25 +235,64 @@ func getString(r io.Reader, b []byte) (string, error) {
 	return string(b), nil
 }
 
-// TCPForward forwarding tcp data.
+// TCPLocalForward forwarding tcp data. Like Local port forward (ssh -L).
 // localAddr, remoteAddr is write as "address:port".
 //
 // example) "127.0.0.1:22", "abc.com:9977"
-func (c *Connect) TCPForward(localAddr, remoteAddr string) (err error) {
+func (c *Connect) TCPLocalForward(localAddr, remoteAddr string) (err error) {
+	// create listner
 	listner, err := net.Listen("tcp", localAddr)
 	if err != nil {
 		return
 	}
 
+	// forwarding
 	go func() {
 		for {
-			//  (type net.Conn)
-			conn, err := listner.Accept()
+			// local (type net.Conn)
+			local, err := listner.Accept()
 			if err != nil {
 				return
 			}
 
-			go c.forwarder(conn, "tcp", remoteAddr)
+			// remote (type net.Conn)
+			remote, err := c.Client.Dial("tcp", remoteAddr)
+
+			// forward
+			go c.forwarder(local, remote)
+		}
+	}()
+
+	return
+}
+
+// TCPRemoteForward forwarding tcp data. Like Remote port forward (ssh -R).
+// localAddr, remoteAddr is write as "address:port".
+//
+// example) "127.0.0.1:22", "abc.com:9977"
+func (c *Connect) TCPRemoteForward(localAddr, remoteAddr string) (err error) {
+	// create listner
+	listner, err := c.Client.Listen("tcp", remoteAddr)
+	if err != nil {
+		return
+	}
+
+	// forwarding
+	go func() {
+		for {
+			// local (type net.Conn)
+			local, err := net.Dial("tcp", localAddr)
+			if err != nil {
+				return
+			}
+
+			// remote (type net.Conn)
+			remote, err := listner.Accept()
+			if err != nil {
+				return
+			}
+
+			go c.forwarder(local, remote)
 		}
 	}()
 
@@ -259,13 +301,7 @@ func (c *Connect) TCPForward(localAddr, remoteAddr string) (err error) {
 
 // forwarder tcp/udp port forward. dialType in `tcp` or `udp`.
 // addr is remote port forward address (`localhost:80`, `192.168.10.100:443` etc...).
-func (c *Connect) forwarder(local net.Conn, dialType string, addr string) (err error) {
-	// Create ssh connect
-	remote, err := c.Client.Dial(dialType, addr)
-	if err != nil {
-		return
-	}
-
+func (c *Connect) forwarder(local net.Conn, remote net.Conn) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -284,6 +320,34 @@ func (c *Connect) forwarder(local net.Conn, dialType string, addr string) (err e
 	wg.Wait()
 	remote.Close()
 	local.Close()
+}
+
+// socks5Resolver prevents DNS from resolving on the local machine, rather than over the SSH connection.
+type socks5Resolver struct{}
+
+func (socks5Resolver) Resolve(ctx context.Context, name string) (context.Context, net.IP, error) {
+	return ctx, nil, nil
+}
+
+// TCPDynamicForward forwarding tcp data. Like Dynamic port forward (ssh -D).
+// listen port Socks5 proxy server.
+func (c *Connect) TCPDynamicForward(address, port string) (err error) {
+	// Create Socks5 config
+	conf := &socks5.Config{
+		Dial: func(ctx context.Context, n, addr string) (net.Conn, error) {
+			return c.Client.Dial(n, addr)
+		},
+		Resolver: socks5Resolver{},
+	}
+
+	// Create Socks5 server
+	s, err := socks5.New(conf)
+	if err != nil {
+		return
+	}
+
+	// Listen
+	err = s.ListenAndServe("tcp", net.JoinHostPort(address, port))
 
 	return
 }
