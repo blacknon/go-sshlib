@@ -54,7 +54,7 @@ func main() {
 	con.SetLog(termlog, false)
 
 	// Create Session
-	session, err := targetCon.CreateSession()
+	session, err := con.CreateSession()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
