@@ -70,6 +70,14 @@ A library to handle ssh easily with Golang.It can do multiple proxy, x11 forward
         // Set terminal log
         con.SetLog(termlog, false)
     
+        // Create Session
+        session, err := con.CreateSession()
+        if err != nil {
+            fmt.Println(err)
+            os.Exit(1)
+        }
+    
         // Start ssh shell
-        con.Shell()
+        con.Shell(session)
     }
+

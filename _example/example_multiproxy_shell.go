@@ -99,5 +99,5 @@ func main() {
 	}
 
 	// Start ssh shell
-	targetCon.Shell(err)
+	targetCon.Shell(session)
 }
