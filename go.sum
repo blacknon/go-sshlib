@@ -3,6 +3,8 @@ github.com/ThalesIgnite/crypto11 v0.1.0 h1:wh3jljzD2GLFcWZQlT5RC2yHxt10gdxhZg/Tn
 github.com/ThalesIgnite/crypto11 v0.1.0/go.mod h1:DdvQlzHSrdXwhcXCWY6o1HquZycJyAwsXXpKlk1+rww=
 github.com/ThalesIgnite/crypto11 v1.0.0 h1:ML06reVxYBiC3WBR5c7DjzLX1MV2jhAhkBeS9Lly+CQ=
 github.com/ThalesIgnite/crypto11 v1.0.0/go.mod h1:gvzQcWFdCGJwPa4S/d1aZKo7hDyfycbCz4TipaFpaJE=
+github.com/ThalesIgnite/crypto11 v1.2.1 h1:KxAScWrgX9gEykv/+mU0Gzwvv7CRmrPQJOqTonsNGBY=
+github.com/ThalesIgnite/crypto11 v1.2.1/go.mod h1:vmlYtalkn8uCp3eStRZ0r7Sslmf1jAtL8De0PIyqPks=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/blacknon/go-scplib v0.0.0-20190214025421-eff8fdc20f75/go.mod h1:Jg1cVjFuCmnfl3eHU/iz1yuc+R5ZiamqmiToD/tkINE=
@@ -33,6 +35,8 @@ github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942/go.mod h1:eCbImbZ95eXtAUI
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/thales-e-security/pool v0.0.1 h1:1eJJNN2K/mAzwfr546brAiQVa3UaRC0gGENsHM8veS8=
+github.com/thales-e-security/pool v0.0.1/go.mod h1:qtpMm2+thHtqhLzTwgDBj/OuNnMpupY8mv0Phz0gjhU=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/vitessio/vitess v2.1.1+incompatible h1:zE9Moh7xCrFDpniUsYPVoiOWtdTK0TWoHUjwFV7iFCA=
 github.com/vitessio/vitess v2.1.1+incompatible/go.mod h1:A11WWLimUfZAYYm8P1I63RryRPP2GdpHRgQcfa++OnQ=
