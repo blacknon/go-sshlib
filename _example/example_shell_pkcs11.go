@@ -17,11 +17,9 @@ import (
 )
 
 var (
-	host = "172.16.20.178"
+	host = "target.com"
 	port = "22"
 	user = "user"
-
-	// termlog = "./test_termlog"
 )
 
 func main() {
@@ -51,9 +49,6 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	// Set terminal log
-	// con.SetLog(termlog, false)
 
 	// Create Session
 	session, err := con.CreateSession()
