@@ -5,6 +5,7 @@
 // TODO(blacknon):
 //     ↓等を読み解いて、Publickey offeringやknown_hostsのチェックを実装する。
 //     既存のライブラリ等はないので、自前でrequestを書く必要があるかも？
+//     かなりの手間がかかりそうなので、対応については相応に時間がかかりそう。
 //       - https://go.googlesource.com/crypto/+/master/ssh/client_auth.go
 //       - https://go.googlesource.com/crypto/+/master/ssh/tcpip.go
 
