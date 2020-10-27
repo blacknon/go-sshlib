@@ -19,13 +19,13 @@ func ExampleConnect_TCPForward() {
 	remoteAddr := "localhost:22"
 
 	// Create ssh.AuthMethod
-	authMethod := sshlib.CreateAuthMethodPublicKey(key, "")
+	authMethod, _ := sshlib.CreateAuthMethodPublicKey(key, "")
 
 	// Create sshlib.Connect
 	con := &sshlib.Connect{}
 
 	// PortForward
-	con.TCPForward(localAddr, remoteAddr)
+	con.TCPLocalForward(localAddr, remoteAddr)
 
 	// Connect ssh server
 	con.CreateClient(host, user, port, []ssh.AuthMethod{authMethod})
