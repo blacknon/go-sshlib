@@ -207,8 +207,6 @@ func readAuthority(hostname, display string) (
 			return name0, data0, nil
 		}
 	}
-
-	return
 }
 
 // getBytes use `readAuthority`
