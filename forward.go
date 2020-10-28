@@ -351,8 +351,8 @@ func (c *Connect) TCPDynamicForward(address, port string) (err error) {
 }
 
 // TODO(blacknon):
-//     ↓を参考に開発をする
-//     https://gist.github.com/codref/473351a24a3ef90162cf10857fac0ff3
+//     OpenSsh独自の実装っぽいので、追加はちょっと厳しいかも？
+//     とりあえず調べてみる。
 //
 // TCPReverseDynamicForward reverse forwarding tcp data.
 // Like Openssh Reverse Dynamic forward (`ssh -R <port>`).
