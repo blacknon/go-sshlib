@@ -9,6 +9,10 @@
 //       - https://go.googlesource.com/crypto/+/master/ssh/client_auth.go
 //       - https://go.googlesource.com/crypto/+/master/ssh/tcpip.go
 
+// TODO(blacknon):
+//     OpenSSH v7.8以降で作成された秘密鍵を読み取りできるようにするための対応(`v0.1.3`)。
+//       - https://github.com/ScaleFT/sshkeys
+
 package sshlib
 
 import (
