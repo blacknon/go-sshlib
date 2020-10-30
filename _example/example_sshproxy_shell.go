@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Blacknon. All rights reserved.
+// Copyright (c) 2020 Blacknon. All rights reserved.
 // Use of this source code is governed by an MIT license
 // that can be found in the LICENSE file.
 
@@ -47,7 +47,7 @@ func main() {
 	proxyAuthMethod := sshlib.CreateAuthMethodPassword(password1)
 
 	// Connect proxy server
-	err := proxyCon.CreateClient(host1, user1, port1, []ssh.AuthMethod{proxyAuthMethod})
+	err := proxyCon.CreateClient(host1, port1, user1, []ssh.AuthMethod{proxyAuthMethod})
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -66,7 +66,7 @@ func main() {
 	targetAuthMethod := sshlib.CreateAuthMethodPassword(password2)
 
 	// Connect target server
-	err = targetCon.CreateClient(host2, user2, port2, []ssh.AuthMethod{targetAuthMethod})
+	err = targetCon.CreateClient(host2, port2, user2, []ssh.AuthMethod{targetAuthMethod})
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

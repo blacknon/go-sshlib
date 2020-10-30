@@ -3,15 +3,11 @@
 // that can be found in the LICENSE file.
 
 // TODO(blacknon):
-//     ↓等を読み解いて、Publickey offeringやknown_hostsのチェックを実装する。
+//     ↓等を読み解いて、Publickey offeringやknown_hostsのチェックを実装する(`v0.2.0`)。
 //     既存のライブラリ等はないので、自前でrequestを書く必要があるかも？
 //     かなりの手間がかかりそうなので、対応については相応に時間がかかりそう。
 //       - https://go.googlesource.com/crypto/+/master/ssh/client_auth.go
 //       - https://go.googlesource.com/crypto/+/master/ssh/tcpip.go
-
-// TODO(blacknon):
-//     OpenSSH v7.8以降で作成された秘密鍵を読み取りできるようにするための対応(`v0.1.3`)。
-//       - https://github.com/ScaleFT/sshkeys
 
 package sshlib
 
@@ -21,6 +17,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ScaleFT/sshkeys"
 	"github.com/miekg/pkcs11/p11"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -63,7 +60,13 @@ func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) 
 // CreateSignerPublicKeyData return ssh.Signer from private key and password
 func CreateSignerPublicKeyData(keyData []byte, password string) (signer ssh.Signer, err error) {
 	if password != "" { // password is not empty
-		signer, err = ssh.ParsePrivateKeyWithPassphrase(keyData, []byte(password))
+		data, err := sshkeys.ParseEncryptedRawPrivateKey(keyData, []byte(password))
+		if err != nil {
+			return signer, err
+		}
+
+		// signer, err = sshkeys.ParseEncryptedRawPrivateKey(keyData, []byte(password))
+		signer, err = ssh.NewSignerFromKey(data)
 	} else { // password is empty
 		signer, err = ssh.ParsePrivateKey(keyData)
 	}
