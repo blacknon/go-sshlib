@@ -7,8 +7,8 @@ require (
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/pkg/errors v0.9.1 // indirect
-	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	golang.org/x/net v0.0.0-20201026091529-146b70c837a4
+	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/sys v0.0.0-20201026173827-119d4633e4d1 // indirect
 )
 
