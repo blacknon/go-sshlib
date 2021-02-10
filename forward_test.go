@@ -1,11 +1,28 @@
-package sshlib_test
+package sshlib
 
 import (
 	"log"
+	"testing"
 
-	"github.com/blacknon/go-sshlib"
 	"golang.org/x/crypto/ssh"
 )
+
+func TestGetDisplay(t *testing.T) {
+
+	for _, tc := range []struct {
+		expect string
+		input  string
+	}{
+		{"0", ":0.0"},
+		{"123", ":123.0"},
+		{"123", ":123"},
+		{"0", "xxx"},
+	} {
+		if act := getX11Display(tc.input); act != tc.expect {
+			t.Errorf(`unexpected result for getX11Display("%s"), act="%s", exp="%s"`, tc.input, act, tc.expect)
+		}
+	}
+}
 
 func ExampleConnect_TCPForward() {
 	// host
@@ -19,10 +36,10 @@ func ExampleConnect_TCPForward() {
 	remoteAddr := "localhost:22"
 
 	// Create ssh.AuthMethod
-	authMethod, _ := sshlib.CreateAuthMethodPublicKey(key, "")
+	authMethod, _ := CreateAuthMethodPublicKey(key, "")
 
 	// Create sshlib.Connect
-	con := &sshlib.Connect{}
+	con := &Connect{}
 
 	// PortForward
 	con.TCPLocalForward(localAddr, remoteAddr)
@@ -33,13 +50,14 @@ func ExampleConnect_TCPForward() {
 
 func ExampleConnect_X11Forward() {
 	// Create session
-	session, err := c.CreateSession()
+	con := &Connect{}
+	session, err := con.CreateSession()
 	if err != nil {
 		return
 	}
 
 	// X11 forwarding
-	err = c.X11Forward(session)
+	err = con.X11Forward(session)
 	if err != nil {
 		log.Fatal(err)
 	}
