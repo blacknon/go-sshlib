@@ -2,6 +2,8 @@
 // Use of this source code is governed by an MIT license
 // that can be found in the LICENSE file.
 
+// TODO(blacknon): Dynamic Port forwardingと同じような感じでhttp proxyを生やす関数を追加
+
 package sshlib
 
 import (
@@ -29,7 +31,7 @@ type x11Request struct {
 
 // X11Forward send x11-req to ssh server and do x11 forwarding.
 // Since the display number of the transfer destination and the PATH of the socket communication file
-// are checked from the local environment variable DISPLAY, this does not work if it is not set.
+// are checked from the local environmsdent variable DISPLAY, this does not work if it is not set.
 //
 // Also, the value of COOKIE transfers the local value as it is. This will be addressed in the future.
 func (c *Connect) X11Forward(session *ssh.Session) (err error) {
