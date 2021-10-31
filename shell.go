@@ -10,11 +10,17 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"time"
 
+	"github.com/lunixbochs/vtclean"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )
+
+const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
+var re = regexp.MustCompile(ansi)
 
 // Shell connect login shell over ssh.
 func (c *Connect) Shell(session *ssh.Session) (err error) {
@@ -129,6 +135,13 @@ func (c *Connect) SetLog(path string, timestamp bool) {
 	c.logTimestamp = timestamp
 }
 
+func (c *Connect) SetLogWithRemoveAnsiCode(path string, timestamp bool) {
+	c.logging = true
+	c.logFile = path
+	c.logTimestamp = timestamp
+	c.logRemoveAnsiCode = true
+}
+
 // logger is logging terminal log to c.logFile
 // TODO(blacknon): Writerを利用した処理方法に変更する(v0.1.1)
 func (c *Connect) logger(session *ssh.Session) (err error) {
@@ -137,7 +150,10 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 		return
 	}
 
-	if c.logTimestamp {
+	if !c.logTimestamp && !c.logRemoveAnsiCode {
+		session.Stdout = io.MultiWriter(session.Stdout, logfile)
+		session.Stderr = io.MultiWriter(session.Stderr, logfile)
+	} else {
 		buf := new(bytes.Buffer)
 		session.Stdout = io.MultiWriter(session.Stdout, buf)
 		session.Stderr = io.MultiWriter(session.Stderr, buf)
@@ -152,8 +168,24 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 						preLine = append(preLine, line...)
 						continue
 					} else {
-						timestamp := time.Now().Format("2006/01/02 15:04:05 ") // yyyy/mm/dd HH:MM:SS
-						fmt.Fprintf(logfile, timestamp+string(append(preLine, line...)))
+						printLine := string(append(preLine, line...))
+						// fmt.Fprintf(logfile, printLine)
+
+						if c.logTimestamp {
+							timestamp := time.Now().Format("2006/01/02 15:04:05 ") // yyyy/mm/dd HH:MM:SS
+							printLine = timestamp + printLine
+						}
+
+						// remove ansi code.
+						if c.logRemoveAnsiCode {
+							// NOTE:
+							//     In vtclean.Clean, the beginning of the line is deleted for some reason.
+							//     for that reason, one character add at line head.
+							printLine = "." + printLine
+							printLine = vtclean.Clean(printLine, false)
+						}
+
+						fmt.Fprintf(logfile, printLine)
 						preLine = []byte{}
 					}
 				} else {
@@ -161,10 +193,6 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 				}
 			}
 		}()
-
-	} else {
-		session.Stdout = io.MultiWriter(session.Stdout, logfile)
-		session.Stderr = io.MultiWriter(session.Stderr, logfile)
 	}
 
 	return err
