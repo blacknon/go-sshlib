@@ -164,6 +164,7 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 			preLine := []byte{}
 			for {
 				if buf.Len() > 0 {
+					// get line
 					line, err := buf.ReadBytes('\n')
 
 					if err == io.EOF {
@@ -171,7 +172,6 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 						continue
 					} else {
 						printLine := string(append(preLine, line...))
-						// fmt.Fprintf(logfile, printLine)
 
 						if c.logTimestamp {
 							timestamp := time.Now().Format("2006/01/02 15:04:05 ") // yyyy/mm/dd HH:MM:SS
