@@ -12,17 +12,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/lunixbochs/vtclean"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )
-
-const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
-
-var re = regexp.MustCompile(ansi)
 
 // Shell connect login shell over ssh.
 func (c *Connect) Shell(session *ssh.Session) (err error) {

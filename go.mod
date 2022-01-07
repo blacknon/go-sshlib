@@ -6,7 +6,7 @@ require (
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/lunixbochs/vtclean v1.0.0
-	github.com/miekg/pkcs11 v1.0.3
+	github.com/miekg/pkcs11 v1.1.1
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20211029224645-99673261e6eb
 )
@@ -18,7 +18,5 @@ require (
 	golang.org/x/sys v0.0.0-20211031064116-611d5d643895 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 )
-
-replace github.com/miekg/pkcs11 => github.com/blacknon/pkcs11 v1.0.4-0.20201018135904-6038e308f617
 
 go 1.17
