@@ -47,7 +47,6 @@ jobs:
     - name: Test code
       run: go test -v .
 
-
   test_on_windows:
     name: "[TEST] Test on Windows"
     runs-on: windows-latest
@@ -65,3 +64,5 @@ jobs:
 
     - name: Test code
       run: go test -v .
+
+  # release_code:
