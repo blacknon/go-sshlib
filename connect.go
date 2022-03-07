@@ -183,7 +183,7 @@ func RequestTty(session *ssh.Session) (err error) {
 	term := os.Getenv("TERM")
 	if len(term) == 0 {
 		if runtime.GOOS == "windows" {
-			term = "cygwin"
+			term = "msys"
 		} else {
 			term = "xterm"
 		}
