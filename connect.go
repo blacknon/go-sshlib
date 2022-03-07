@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
@@ -182,12 +181,7 @@ func RequestTty(session *ssh.Session) (err error) {
 	// TODO(blacknon): 環境変数から取得する方式だと、Windowsでうまく動作するか不明なので確認して対処する
 	term := os.Getenv("TERM")
 	if len(term) == 0 {
-		if runtime.GOOS == "windows" {
-			term = "msys"
-		} else {
-			term = "xterm"
-		}
-
+		term = "xterm"
 	}
 
 	if err = session.RequestPty(term, hight, width, modes); err != nil {
