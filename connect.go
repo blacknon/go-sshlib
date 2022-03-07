@@ -172,7 +172,7 @@ func RequestTty(session *ssh.Session) (err error) {
 	}
 
 	// Get terminal window size
-	fd := int(os.Stdin.Fd())
+	fd := int(os.Stdout.Fd())
 	width, hight, err := terminal.GetSize(fd)
 	if err != nil {
 		return
