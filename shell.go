@@ -12,7 +12,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/lunixbochs/vtclean"
@@ -89,30 +88,9 @@ func (c *Connect) CmdShell(session *ssh.Session, command string) (err error) {
 
 func (c *Connect) setupShell(session *ssh.Session) (err error) {
 	// set FD
-	if runtime.GOOS == "windows" {
-		stdin, err := session.StdinPipe()
-		if err != nil {
-			return err
-		}
-
-		stdout, err := session.StdoutPipe()
-		if err != nil {
-			return err
-		}
-
-		stderr, err := session.StderrPipe()
-		if err != nil {
-			return err
-		}
-
-		go io.Copy(stdin, os.Stdin)
-		go io.Copy(os.Stdout, stdout)
-		go io.Copy(os.Stderr, stderr)
-	} else {
-		session.Stdin = os.Stdin
-		session.Stdout = os.Stdout
-		session.Stderr = os.Stderr
-	}
+	session.Stdin = os.Stdin
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
 
 	// Logging
 	if c.logging {
