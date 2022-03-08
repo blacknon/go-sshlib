@@ -11,6 +11,6 @@ import (
 	"os"
 )
 
-func getStdin() io.ReadCloser {
+func GetStdin() io.ReadCloser {
 	return os.Stdin
 }
