@@ -18,43 +18,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func (c *Connect) setupShell(session *ssh.Session) (err error) {
+func getStdin() io.ReadCloser {
 	h := uint32(windows.STD_INPUT_HANDLE)
 	stdin := windowsconsole.NewAnsiReader(int(h))
 
-	// set FD
-	session.Stdin = stdin
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-
-	// Logging
-	if c.logging {
-		err = c.logger(session)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	err = nil
-
-	// Request tty
-	err = RequestTty(session)
-	if err != nil {
-		return err
-	}
-
-	// x11 forwarding
-	if c.ForwardX11 {
-		err = c.X11Forward(session)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	err = nil
-
-	// ssh agent forwarding
-	if c.ForwardAgent {
-		c.ForwardSshAgent(session)
-	}
-
-	return
+	return stdin
 }
