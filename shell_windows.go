@@ -10,11 +10,9 @@
 package sshlib
 
 import (
-	"log"
-	"os"
+	"io"
 
 	windowsconsole "github.com/moby/term/windows"
-	"golang.org/x/crypto/ssh"
 	"golang.org/x/sys/windows"
 )
 
