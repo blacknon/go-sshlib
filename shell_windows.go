@@ -15,11 +15,12 @@ import (
 
 	windowsconsole "github.com/moby/term/windows"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/sys/windows"
 )
 
 func (c *Connect) setupShell(session *ssh.Session) (err error) {
 	h := uint32(windows.STD_INPUT_HANDLE)
-	stdin := windowsconsole.NewAnsiReader(h)
+	stdin := windowsconsole.NewAnsiReader(int(h))
 
 	// set FD
 	session.Stdin = stdin
