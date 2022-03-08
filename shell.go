@@ -158,7 +158,7 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 
 func (c *Connect) setupShell(session *ssh.Session) (err error) {
 	// set FD
-	stdin := getStdin()
+	stdin := GetStdin()
 	session.Stdin = stdin
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
