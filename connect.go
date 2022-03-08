@@ -172,7 +172,7 @@ func RequestTty(session *ssh.Session) (err error) {
 	}
 
 	// Get terminal window size
-	fd := int(os.Stdin.Fd())
+	fd := int(os.Stdout.Fd())
 	width, hight, err := terminal.GetSize(fd)
 	if err != nil {
 		return
@@ -180,6 +180,10 @@ func RequestTty(session *ssh.Session) (err error) {
 
 	// TODO(blacknon): 環境変数から取得する方式だと、Windowsでうまく動作するか不明なので確認して対処する
 	term := os.Getenv("TERM")
+	if len(term) == 0 {
+		term = "xterm"
+	}
+
 	if err = session.RequestPty(term, hight, width, modes); err != nil {
 		session.Close()
 		return
