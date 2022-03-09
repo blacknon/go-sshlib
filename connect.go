@@ -46,6 +46,12 @@ type Connect struct {
 	// Forward ssh agent flag.
 	ForwardAgent bool
 
+	// CheckKnownHosts true, check knownhosts.
+	CheckKnownHosts bool
+
+	// KnownHostsFiles is list of knownhosts files path.
+	KnownHostsFiles []string
+
 	// ssh-agent interface.
 	// agent.Agent or agent.ExtendedAgent
 	Agent AgentInterface
@@ -77,10 +83,19 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 
 	// Create new ssh.ClientConfig{}
 	config := &ssh.ClientConfig{
-		User:            user,
-		Auth:            authMethods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         time.Duration(timeout) * time.Second,
+		User:    user,
+		Auth:    authMethods,
+		Timeout: time.Duration(timeout) * time.Second,
+	}
+
+	if c.CheckKnownHosts {
+		if len(c.KnownHostsFiles) == 0 {
+			// append default files
+			c.KnownHostsFiles = append(c.KnownHostsFiles, "~/.ssh/known_hosts")
+		}
+		config.HostKeyCallback = c.verifyAndAppendNew
+	} else {
+		config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 	}
 
 	// check Dialer
