@@ -46,14 +46,30 @@ type Connect struct {
 	// Forward ssh agent flag.
 	ForwardAgent bool
 
-	// CheckKnownHosts true, check knownhosts.
+	// CheckKnownHosts if true, check knownhosts.
 	CheckKnownHosts bool
+
+	// OverwriteKnownHosts if true, if the knownhost is different, check whether to overwrite.
+	OverwriteKnownHosts bool
 
 	// KnownHostsFiles is list of knownhosts files path.
 	KnownHostsFiles []string
 
-	//
+	// TextAskWriteKnownHosts defines a confirmation message when writing a knownhost.
+	// We are using Go's template engine and have the following variables available.
+	// - Address ... ssh server hostname
+	// - RemoteAddr ... ssh server address
+	// - Fingerprint ... ssh PublicKey fingerprint
 	TextAskWriteKnownHosts string
+
+	// TextAskOverwriteKnownHosts defines a confirmation message when over-writing a knownhost.
+	// We are using Go's template engine and have the following variables available.
+	// - Address ... ssh server hostname
+	// - RemoteAddr ... ssh server address
+	// - OldKeyText ... old ssh PublicKey text.
+	//                  ex: /home/user/.ssh/known_hosts:17: ecdsa-sha2-nistp256 AAAAE2VjZHN...bJklasnFtkFSDyOjTFSv2g=
+	// - NewFingerprint ... new ssh PublicKey fingerprint
+	TextAskOverwriteKnownHosts string
 
 	// ssh-agent interface.
 	// agent.Agent or agent.ExtendedAgent
