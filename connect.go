@@ -52,6 +52,9 @@ type Connect struct {
 	// KnownHostsFiles is list of knownhosts files path.
 	KnownHostsFiles []string
 
+	//
+	TextAskWriteKnownHosts string
+
 	// ssh-agent interface.
 	// agent.Agent or agent.ExtendedAgent
 	Agent AgentInterface
