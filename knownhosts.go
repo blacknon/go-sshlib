@@ -12,10 +12,17 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"text/template"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 )
+
+type Inventory struct {
+	Address     string
+	RemoteAddr  string
+	Fingerprint string
+}
 
 // verifyAndAppendNew checks knownhosts from the files stored in c.KnownHostsFiles.
 // If there is a problem with the known hosts check, it returns an error and the check content.
@@ -54,8 +61,15 @@ func (c *Connect) verifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 		return err
 	}
 
+	// set TextAskWriteKnownHosts default text
+	if len(c.TextAskWriteKnownHosts) == 0 {
+		c.TextAskWriteKnownHosts += "The authenticity of host '{{.Address}} ({{.RemoteAddr}})' can't be established.\n"
+		c.TextAskWriteKnownHosts += "RSA key fingerprint is {{.Fingerprint}}\n"
+		c.TextAskWriteKnownHosts += "Are you sure you want to continue connecting (yes/no)?"
+	}
+
 	//
-	if answer, err := askAddingUnknownHostKey(hostname, remote, key); err != nil || !answer {
+	if answer, err := askAddingUnknownHostKey(c.TextAskWriteKnownHosts, hostname, remote, key); err != nil || !answer {
 		msg := "host key verification failed"
 		if err != nil {
 			msg += ": " + err.Error()
@@ -87,12 +101,18 @@ func (c *Connect) verifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 	return nil
 }
 
-// verifyAndAppendNew checks knownhosts from the files stored in c.KnownHostsFiles.
-// If there is a problem with the known hosts check, it returns an error and the check content.
-// If is no problem, error returns Nil.
-//
+// askAddingUnknownHostKey
 // 【参考】: https://github.com/tatsushid/minssh/blob/57eae8c5bcf5d94639891f3267f05251f05face4/pkg/minssh/minssh.go#L93-L128
-func askAddingUnknownHostKey(address string, remote net.Addr, key ssh.PublicKey) (bool, error) {
+func askAddingUnknownHostKey(text string, address string, remote net.Addr, key ssh.PublicKey) (bool, error) {
+	// set template variable
+	sweaters := Inventory{address, remote.String(), ssh.FingerprintSHA256(key)}
+
+	// set template
+	tmpl, err := template.New("test").Parse(text)
+	if err != nil {
+		return false, err
+	}
+
 	//
 	stopC := make(chan struct{})
 	defer func() {
@@ -109,9 +129,10 @@ func askAddingUnknownHostKey(address string, remote net.Addr, key ssh.PublicKey)
 		}
 	}()
 
-	fmt.Printf("The authenticity of host '%s (%s)' can't be established.\n", address, remote.String())
-	fmt.Printf("RSA key fingerprint is %s\n", ssh.FingerprintSHA256(key))
-	fmt.Printf("Are you sure you want to continue connecting (yes/no)? ")
+	err = tmpl.Execute(os.Stdout, sweaters)
+	if err != nil {
+		return false, err
+	}
 
 	b := bufio.NewReader(os.Stdin)
 	for {
