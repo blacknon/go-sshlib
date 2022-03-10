@@ -2,8 +2,6 @@
 // Use of this source code is governed by an MIT license
 // that can be found in the LICENSE file.
 
-// TODO(blacknon): Dynamic Port forwardingと同じような感じでhttp proxyを生やす関数を追加
-
 package sshlib
 
 import (
@@ -339,10 +337,6 @@ func (c *Connect) TCPDynamicForward(address, port string) (err error) {
 	return
 }
 
-// TODO(blacknon):
-//     OpenSsh独自の実装っぽいので、追加はちょっと厳しいかも？
-//     とりあえず調べてみる。
-//
 // TCPReverseDynamicForward reverse forwarding tcp data.
 // Like Openssh Reverse Dynamic forward (`ssh -R <port>`).
 func (c *Connect) TCPReverseDynamicForward(address, port string) (err error) {
