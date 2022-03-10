@@ -345,4 +345,28 @@ func (c *Connect) TCPDynamicForward(address, port string) (err error) {
 //
 // TCPReverseDynamicForward reverse forwarding tcp data.
 // Like Openssh Reverse Dynamic forward (`ssh -R <port>`).
-// func (c *Connect) TCPReverseDynamicForward(address, port string) (err error) {}
+func (c *Connect) TCPReverseDynamicForward(address, port string) (err error) {
+	// Create Socks5 config
+	conf := &socks5.Config{
+		Dial: func(ctx context.Context, n, addr string) (net.Conn, error) {
+			return net.Dial(n, addr)
+		},
+		Resolver: socks5Resolver{},
+	}
+
+	// create listner
+	listner, err := c.Client.Listen("tcp", net.JoinHostPort(address, port))
+	if err != nil {
+		return
+	}
+
+	// Create Socks5 server
+	s, err := socks5.New(conf)
+	if err != nil {
+		return
+	}
+
+	// Listen
+	err = s.Serve(listner)
+	return
+}

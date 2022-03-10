@@ -159,7 +159,7 @@ func askAddingUnknownHostKey(text string, address string, remote net.Addr, key s
 	}
 }
 
-// askOverwriteHostKey
+// askOverwriteKnownHostKey
 // 【参考】: https://github.com/tatsushid/minssh/blob/57eae8c5bcf5d94639891f3267f05251f05face4/pkg/minssh/minssh.go#L93-L128
 func askOverwriteKnownHostKey(text string, address string, remote net.Addr, key ssh.PublicKey, oldkey string) (bool, error) {
 	// set template variable
