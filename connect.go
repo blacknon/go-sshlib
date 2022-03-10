@@ -212,7 +212,7 @@ func RequestTty(session *ssh.Session) (err error) {
 		return
 	}
 
-	// TODO(blacknon): 環境変数から取得する方式だと、Windowsでうまく動作するか不明なので確認して対処する
+	// Get env `TERM`
 	term := os.Getenv("TERM")
 	if len(term) == 0 {
 		term = "xterm"
