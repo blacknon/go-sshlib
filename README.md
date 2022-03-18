@@ -8,6 +8,8 @@ go-sshlib
 A library to handle ssh easily with Golang.It can do multiple proxy, x11 forwarding, etc.
 Supported on Linux, macOS and Windows.
 
+If use **pkcs11** authentication, cgo must be enabled.
+
 * This program refactors the processing performed by lssh(https://github.com/blacknon/lssh) so that it can be treated as a library.
 
 ## Usage
