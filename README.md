@@ -68,7 +68,7 @@ If use **pkcs11** authentication, cgo must be enabled.
         // con.ConnectSshAgent()
 
         // Connect ssh server
-        err := con.CreateClient(host, user, port, []ssh.AuthMethod{authMethod})
+        err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod})
         if err != nil {
             fmt.Println(err)
             os.Exit(1)
