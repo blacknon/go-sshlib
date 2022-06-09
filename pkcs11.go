@@ -7,8 +7,6 @@
 package sshlib
 
 import (
-	"fmt"
-
 	"github.com/blacknon/crypto11"
 	"github.com/miekg/pkcs11"
 )
@@ -51,9 +49,6 @@ func (c *C11) CreateCtx(ctx *pkcs11.Ctx) (err error) {
 
 	// Create crypto11 Ctx
 	c.Ctx, err = crypto11.Configure(config)
-
-	fmt.Println("error")
-	fmt.Println(err)
 
 	return
 }
