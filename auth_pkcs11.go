@@ -7,7 +7,9 @@
 package sshlib
 
 import (
-	"github.com/miekg/pkcs11/p11"
+	"fmt"
+
+	"github.com/miekg/pkcs11"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -38,20 +40,33 @@ func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) 
 	provider = getAbsPath(provider)
 
 	// Create p11.module
-	module, err := p11.OpenModule(provider)
-	if err != nil {
-		return
-	}
+	// module, err := p11.OpenModule(provider)
+	// if err != nil {
+	// 	return
+	// }
 
 	// Get p11 Module's Slot
-	slots, err := module.Slots()
+	// slots, err := module.Slots()
+	// if err != nil {
+	// 	return
+	// }
+
+	ctx := pkcs11.New(provider)
+	err = ctx.Initialize()
 	if err != nil {
 		return
 	}
-	c11array := []*C11{}
+	// defer ctx.Destroy()
+	// defer ctx.Finalize()
 
+	slots, err := ctx.GetSlotList(true)
+	if err != nil {
+		return
+	}
+
+	c11array := []*C11{}
 	for _, slot := range slots {
-		tokenInfo, err := slot.TokenInfo()
+		tokenInfo, err := ctx.GetTokenInfo(slot)
 		if err != nil {
 			continue
 		}
@@ -60,21 +75,25 @@ func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) 
 			Label: tokenInfo.Label,
 			PIN:   pin,
 		}
+
 		c11array = append(c11array, c)
 	}
 
-	// Destroy Module
-	module.Destroy()
-
 	// for loop
 	for _, c11 := range c11array {
-		err := c11.CreateCtx(provider)
+		err := c11.CreateCtx(ctx)
 		if err != nil {
+			// TODO: errorをなにかしらの形で返す
 			continue
+
 		}
 
+		fmt.Println(1)
 		sigs, err := c11.GetSigner()
+		fmt.Println(2)
+
 		if err != nil {
+			// TODO: errorをなにかしらの形で返す
 			continue
 		}
 
