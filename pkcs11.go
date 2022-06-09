@@ -7,7 +7,10 @@
 package sshlib
 
 import (
-	"github.com/ThalesIgnite/crypto11"
+	"fmt"
+
+	"github.com/blacknon/crypto11"
+	"github.com/miekg/pkcs11"
 )
 
 // C11 struct for Crypto11 processing.
@@ -30,7 +33,7 @@ func (c *C11) getPIN() (err error) {
 
 // CreateCtx is create crypto11.Context
 // Not available if cgo is disabled.
-func (c *C11) CreateCtx(provider string) (err error) {
+func (c *C11) CreateCtx(ctx *pkcs11.Ctx) (err error) {
 	// Get PIN Code
 	err = c.getPIN()
 	if err != nil {
@@ -41,13 +44,16 @@ func (c *C11) CreateCtx(provider string) (err error) {
 
 	// Create crypto11 Configure
 	config := &crypto11.Config{
-		Path:       provider,
+		PKCS11Ctx:  ctx,
 		TokenLabel: c.Label,
 		Pin:        c.PIN,
 	}
 
 	// Create crypto11 Ctx
 	c.Ctx, err = crypto11.Configure(config)
+
+	fmt.Println("error")
+	fmt.Println(err)
 
 	return
 }
