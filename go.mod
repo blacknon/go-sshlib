@@ -27,7 +27,3 @@ require (
 )
 
 go 1.18
-
-replace github.com/blacknon/crypto11 => ../crypto11
-
-replace github.com/miekg/pkcs11 => ../pkcs11
