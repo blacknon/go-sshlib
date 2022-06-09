@@ -7,8 +7,6 @@
 package sshlib
 
 import (
-	"fmt"
-
 	"github.com/miekg/pkcs11"
 	"golang.org/x/crypto/ssh"
 )
@@ -39,28 +37,18 @@ func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) 
 	// get absolute path
 	provider = getAbsPath(provider)
 
-	// Create p11.module
-	// module, err := p11.OpenModule(provider)
-	// if err != nil {
-	// 	return
-	// }
-
-	// Get p11 Module's Slot
-	// slots, err := module.Slots()
-	// if err != nil {
-	// 	return
-	// }
-
 	ctx := pkcs11.New(provider)
 	err = ctx.Initialize()
 	if err != nil {
+		ctx.Destroy()
+		ctx.Finalize()
 		return
 	}
-	// defer ctx.Destroy()
-	// defer ctx.Finalize()
 
 	slots, err := ctx.GetSlotList(true)
 	if err != nil {
+		ctx.Destroy()
+		ctx.Finalize()
 		return
 	}
 
@@ -88,10 +76,7 @@ func CreateSignerPKCS11(provider, pin string) (signers []ssh.Signer, err error) 
 
 		}
 
-		fmt.Println(1)
 		sigs, err := c11.GetSigner()
-		fmt.Println(2)
-
 		if err != nil {
 			// TODO: errorをなにかしらの形で返す
 			continue

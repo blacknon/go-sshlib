@@ -2,10 +2,10 @@ module github.com/blacknon/go-sshlib
 
 require (
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
+	// TODO: マージされたらベースのリポジトリに変更する
 	github.com/blacknon/crypto11 v0.0.0
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/lunixbochs/vtclean v1.0.0
-	// github.com/miekg/pkcs11 v1.1.1
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
