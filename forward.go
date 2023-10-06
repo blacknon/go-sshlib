@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"strconv"
 	"sync"
 
 	"github.com/armon/go-socks5"
@@ -35,7 +36,7 @@ type x11Request struct {
 func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	display := getX11Display(os.Getenv("DISPLAY"))
 
-	_, xAuth, err := readAuthority("", display)
+	_, xAuth, err := readAuthority("", strconv.Itoa(display))
 	if err != io.EOF && err != nil {
 		return
 	}
@@ -77,15 +78,25 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 }
 
 // x11Connect return net.Conn x11 socket.
-func x11Connect(display string) (conn net.Conn, err error) {
+func x11Connect(display string) (conn net.Conn, err error) { 
 	var conDisplay string
+
+	protocol := "unix"
+
 	if display[0] == '/' { // PATH type socket
 		conDisplay = display
+	} else if display[0] != ':' { // Forwarded display
+		protocol = "tcp"
+		if b, _, ok := strings.Cut(display, ":"); ok {
+			conDisplay = fmt.Sprintf("%v:%v", b, getX11Display(display) + 6000)
+		} else {
+			conDisplay = display
+		}
 	} else { // /tmp/.X11-unix/X0
-		conDisplay = "/tmp/.X11-unix/X" + getX11Display(display)
+		conDisplay = fmt.Sprintf("/tmp/.X11-unix/X%v", getX11Display(display))
 	}
 
-	return net.Dial("unix", conDisplay)
+	return net.Dial(protocol, conDisplay)
 }
 
 // x11forwarder forwarding socket x11 data.
@@ -100,7 +111,7 @@ func x11forwarder(channel ssh.Channel) {
 	wg.Add(2)
 	go func() {
 		io.Copy(conn, channel)
-		conn.(*net.UnixConn).CloseWrite()
+		conn.Close()
 		wg.Done()
 	}()
 	go func() {
@@ -115,19 +126,24 @@ func x11forwarder(channel ssh.Channel) {
 }
 
 // getX11Display return X11 display number from env $DISPLAY
-func getX11Display(display string) string {
+func getX11Display(display string) int {
 	colonIdx := strings.LastIndex(display, ":")
 	dotIdx := strings.LastIndex(display, ".")
 
 	if colonIdx < 0 {
-		return "0"
+		return 0
 	}
 
 	if dotIdx < 0 {
 		dotIdx = len(display)
 	}
 
-	return display[colonIdx+1 : dotIdx]
+	i, err := strconv.Atoi(display[colonIdx+1:dotIdx])
+	if err != nil {
+		return 0
+	}
+
+	return i
 }
 
 // readAuthority Read env `$XAUTHORITY`. If not set value, read `~/.Xauthority`.

@@ -10,16 +10,18 @@ import (
 func TestGetDisplay(t *testing.T) {
 
 	for _, tc := range []struct {
-		expect string
+		expect int
 		input  string
 	}{
-		{"0", ":0.0"},
-		{"123", ":123.0"},
-		{"123", ":123"},
-		{"0", "xxx"},
+		{0, ":0.0"},
+		{123, ":123.0"},
+		{123, ":123"},
+		{0, "xxx"},
+		{11, "localhost:11.0"},
+		{123, "randomhost:123.0"},
 	} {
 		if act := getX11Display(tc.input); act != tc.expect {
-			t.Errorf(`unexpected result for getX11Display("%s"), act="%s", exp="%s"`, tc.input, act, tc.expect)
+			t.Errorf(`unexpected result for getX11Display("%s"), act="%v", exp="%v"`, tc.input, act, tc.expect)
 		}
 	}
 }
