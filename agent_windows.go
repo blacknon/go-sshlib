@@ -7,29 +7,21 @@
 package sshlib
 
 import (
-	"net"
-	"os"
-
-	"github.com/davidmz/go-pageant"
-
+	sshagent "github.com/xanzy/ssh-agent"
 	"golang.org/x/crypto/ssh/agent"
 )
 
 // ConnectSshAgent
 func ConnectSshAgent() (ag AgentInterface) {
-	// Get env "SSH_AUTH_SOCK" and connect.
-	sockPath := os.Getenv("SSH_AUTH_SOCK")
-	sock, err := net.Dial("unix", sockPath)
-
-	if err != nil {
-		ag = pageant.New()
-
-		if ag == nil {
+	// first try use pageant then ssh-agent of OpenSSH
+	if sshagent.Available() {
+		var err error
+		ag, _, err = sshagent.New()
+		if err != nil {
 			ag = agent.NewKeyring()
 		}
 	} else {
-		// connect SSH_AUTH_SOCK
-		ag = agent.NewClient(sock)
+		ag = agent.NewKeyring()
 	}
 
 	return
