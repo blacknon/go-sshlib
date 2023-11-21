@@ -5,31 +5,12 @@
 package sshlib
 
 import (
-	"net"
-	"os"
-
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
 
 // AgentInterface Interface for storing agent.Agent or agent.ExtendedAgent.
 type AgentInterface interface{}
-
-// ConnectSshAgent
-func ConnectSshAgent() (ag AgentInterface) {
-	// Get env "SSH_AUTH_SOCK" and connect.
-	sockPath := os.Getenv("SSH_AUTH_SOCK")
-	sock, err := net.Dial("unix", sockPath)
-
-	if err != nil {
-		ag = agent.NewKeyring()
-	} else {
-		// connect SSH_AUTH_SOCK
-		ag = agent.NewClient(sock)
-	}
-
-	return
-}
 
 // AddKeySshAgent is rapper agent.Add().
 // key must be a *rsa.PrivateKey, *dsa.PrivateKey or
