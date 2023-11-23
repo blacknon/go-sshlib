@@ -35,7 +35,12 @@ func ConnectSshAgent() (ag AgentInterface) {
 		}
 		sock, err = winio.DialPipe(sockPath, nil)
 		if err != nil {
-			_, sock, err = sshagent.New()
+			if sshagent.Available() {
+				ag, _, err = sshagent.New()
+				if err == nil {
+					return
+				}
+			}
 		}
 	}
 
