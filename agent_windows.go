@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/Microsoft/go-winio"
-	sshagent "github.com/xanzy/ssh-agent"
+	"github.com/abakum/pageant"
 	"golang.org/x/crypto/ssh/agent"
 )
 
@@ -35,12 +35,7 @@ func ConnectSshAgent() (ag AgentInterface) {
 		}
 		sock, err = winio.DialPipe(sockPath, nil)
 		if err != nil {
-			if sshagent.Available() {
-				ag, _, err = sshagent.New()
-				if err == nil {
-					return
-				}
-			}
+			sock, err = pageant.NewConn()
 		}
 	}
 
