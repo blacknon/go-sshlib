@@ -18,25 +18,31 @@ import (
 
 // ConnectSshAgent
 func ConnectSshAgent() (ag AgentInterface) {
+	const (
+		PIPE         = `\\.\pipe\`
+		sshAgentPipe = "openssh-ssh-agent"
+	)
 	// Get env "SSH_AUTH_SOCK" and connect.
 	sockPath := os.Getenv("SSH_AUTH_SOCK")
-	sock, err := net.Dial("unix", sockPath) // for some versions of Windows
+	emptySockPath = len(sockPath) == 0
+
+	if emptySockPath {
+		sock, err = pageant.NewConn()
+	}
+
+	if err != nil && !emptySockPath {
+		// `sc query afunix` for some versions of Windows
+		sock, err := net.Dial("unix", sockPath)
+	}
 
 	if err != nil {
-		const (
-			PIPE         = `\\.\pipe\`
-			sshAgentPipe = PIPE + "openssh-ssh-agent"
-		)
-		if len(sockPath) == 0 {
+		if emptySockPath {
 			sockPath = sshAgentPipe
 		}
 		if !strings.HasPrefix(sockPath, PIPE) {
 			sockPath = PIPE + sockPath
 		}
 		sock, err = winio.DialPipe(sockPath, nil)
-		if err != nil {
-			sock, err = pageant.NewConn()
-		}
 	}
 
 	if err != nil {
