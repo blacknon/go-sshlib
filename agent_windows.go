@@ -22,9 +22,13 @@ func ConnectSshAgent() (ag AgentInterface) {
 		PIPE         = `\\.\pipe\`
 		sshAgentPipe = "openssh-ssh-agent"
 	)
+	var (
+		sock net.Conn
+		err  error
+	)
 	// Get env "SSH_AUTH_SOCK" and connect.
 	sockPath := os.Getenv("SSH_AUTH_SOCK")
-	emptySockPath = len(sockPath) == 0
+	emptySockPath := len(sockPath) == 0
 
 	if emptySockPath {
 		sock, err = pageant.NewConn()
@@ -32,7 +36,7 @@ func ConnectSshAgent() (ag AgentInterface) {
 
 	if err != nil && !emptySockPath {
 		// `sc query afunix` for some versions of Windows
-		sock, err := net.Dial("unix", sockPath)
+		sock, err = net.Dial("unix", sockPath)
 	}
 
 	if err != nil {

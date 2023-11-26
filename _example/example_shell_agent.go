@@ -28,7 +28,7 @@ var (
 	// user = "user_"
 
 	// sshd of gliderlabs on Windows
-	host = "127.0.0.1"
+	host = "10.161.115.189"
 	port = "2222"
 	user = "user_"
 

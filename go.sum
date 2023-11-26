@@ -4,8 +4,6 @@ github.com/Microsoft/go-winio v0.5.2 h1:a9IhgEQBCUEk6QCdml9CiJGhAws+YwffDHEMp1VM
 github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=
 github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5 h1:VauE2GcJNZFun2Och6tIT2zJZK1v6jxALQDA9BIji/E=
 github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5/go.mod h1:gxOHeajFfvGQh/fxlC8oOKBe23xnnJTif00IFFbiT+o=
-github.com/abakum/pageant v0.0.0-20231124132719-c2b877a058f4 h1:ILL55pLQ25A+mKBj2F4WuAKXNzSjjgjW4Wi9WvNqa4k=
-github.com/abakum/pageant v0.0.0-20231124132719-c2b877a058f4/go.mod h1:LocqZdC4qlU9eXgFamJgIeJ4Z5RK29LS4zuAbJ9RIAw=
 github.com/abakum/pageant v0.0.0-20231124135236-c9f79a77a513 h1:CYzvRvNCO1Cho3f8UR3k9PbeIkzlGM69MQLDE1Rd4Z0=
 github.com/abakum/pageant v0.0.0-20231124135236-c9f79a77a513/go.mod h1:LocqZdC4qlU9eXgFamJgIeJ4Z5RK29LS4zuAbJ9RIAw=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
