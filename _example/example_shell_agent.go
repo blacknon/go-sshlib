@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	sshlib "github.com/blacknon/go-sshlib"
+	"github.com/blacknon/go-sshlib"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -31,8 +31,6 @@ var (
 	host = "10.161.115.189"
 	port = "2222"
 	user = "user_"
-
-	termlog = "./test_termlog"
 )
 
 func main() {
@@ -61,9 +59,6 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	// Set terminal log
-	// con.SetLog(termlog, false)
 
 	// Create Session
 	session, err := con.CreateSession()

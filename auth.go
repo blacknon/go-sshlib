@@ -181,10 +181,18 @@ func CreateSignerAgent(sshAgent interface{}) (signers []ssh.Signer, err error) {
 // CreateAuthMethodAgent returns ssh.AuthMethod from con.Agent.
 // case con.Agent is nil then ConnectSshAgent to it
 func CreateAuthMethodAgent(con *Connect) (auth ssh.AuthMethod, err error) {
-	if con.Agent == nil {
-		con.Agent = ConnectSshAgent()
+	var ag AgentInterface
+	if con == nil {
+		ag = ConnectSshAgent()
+	} else {
+		if con.Agent == nil {
+			ag = ConnectSshAgent()
+			con.Agent = ag
+		} else {
+			ag = con.Agent
+		}
 	}
-	signers, err := CreateSignerAgent(con.Agent)
+	signers, err := CreateSignerAgent(ag)
 	if err != nil {
 		return
 	}

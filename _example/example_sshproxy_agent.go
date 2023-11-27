@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"os"
 
-	sshlib "github.com/blacknon/go-sshlib"
+	"github.com/blacknon/go-sshlib"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -25,11 +25,6 @@ var (
 	// host1     = "proxy.com"
 	// port1     = "22"
 	// user1     = "user"
-
-	// dropbear on linux
-	// host1 = "10.161.115.160"
-	// port1 = "22"
-	// user1 = "root"
 
 	// sshd of OpenSSH on Windows
 	host1 = "10.161.115.189"
@@ -45,13 +40,6 @@ var (
 	host2 = "10.161.115.160"
 	port2 = "22"
 	user2 = "root"
-
-	// sshd of OpenSSH on Windows
-	// host2 = "10.161.115.189"
-	// port2 = "22"
-	// user2 = "user_"
-
-	termlog = "./test_termlog"
 )
 
 func main() {
@@ -63,7 +51,8 @@ func main() {
 	proxyCon := &sshlib.Connect{}
 
 	// Create ssh.AuthMethod
-	AuthMethod, err := sshlib.CreateAuthMethodAgent(proxyCon)
+	// case agent forwarding not used do not store ConnectSshAgent() to proxyCon.Agent
+	AuthMethod, err := sshlib.CreateAuthMethodAgent(nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
