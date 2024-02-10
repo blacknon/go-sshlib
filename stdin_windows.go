@@ -9,7 +9,7 @@ package sshlib
 import (
 	"io"
 
-	windowsconsole "github.com/moby/term/windows"
+	windowsconsole "github.com/abakum/term/windows"
 	"golang.org/x/sys/windows"
 )
 

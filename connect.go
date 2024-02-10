@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/proxy"
-	terminal "golang.org/x/term"
+	"golang.org/x/term"
 )
 
 // Connect structure to store contents about ssh connection.
@@ -206,18 +206,18 @@ func RequestTty(session *ssh.Session) (err error) {
 
 	// Get terminal window size
 	fd := int(os.Stdout.Fd())
-	width, hight, err := terminal.GetSize(fd)
+	width, hight, err := term.GetSize(fd)
 	if err != nil {
 		return
 	}
 
 	// Get env `TERM`
-	term := os.Getenv("TERM")
-	if len(term) == 0 {
-		term = "xterm"
+	xterm := os.Getenv("TERM")
+	if len(xterm) == 0 {
+		xterm = "xterm"
 	}
 
-	if err = session.RequestPty(term, hight, width, modes); err != nil {
+	if err = session.RequestPty(xterm, hight, width, modes); err != nil {
 		session.Close()
 		return
 	}
@@ -232,7 +232,7 @@ func RequestTty(session *ssh.Session) (err error) {
 			switch s {
 			case winch:
 				fd := int(os.Stdout.Fd())
-				width, hight, _ = terminal.GetSize(fd)
+				width, hight, _ = term.GetSize(fd)
 				session.WindowChange(hight, width)
 			}
 		}

@@ -14,18 +14,18 @@ import (
 
 	"github.com/lunixbochs/vtclean"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 // Shell connect login shell over ssh.
 func (c *Connect) Shell(session *ssh.Session) (err error) {
 	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
-	state, err := terminal.MakeRaw(fd)
+	state, err := term.MakeRaw(fd)
 	if err != nil {
 		return
 	}
-	defer terminal.Restore(fd, state)
+	defer term.Restore(fd, state)
 
 	// setup
 	err = c.setupShell(session)
@@ -55,11 +55,11 @@ func (c *Connect) Shell(session *ssh.Session) (err error) {
 func (c *Connect) CmdShell(session *ssh.Session, command string) (err error) {
 	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
-	state, err := terminal.MakeRaw(fd)
+	state, err := term.MakeRaw(fd)
 	if err != nil {
 		return
 	}
-	defer terminal.Restore(fd, state)
+	defer term.Restore(fd, state)
 
 	// setup
 	err = c.setupShell(session)

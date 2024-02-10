@@ -13,7 +13,7 @@ package sshlib
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -46,7 +46,7 @@ func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) 
 	key = getAbsPath(key)
 
 	// Read PrivateKey file
-	keyData, err := ioutil.ReadFile(key)
+	keyData, err := os.ReadFile(key)
 	if err != nil {
 		return
 	}
@@ -87,7 +87,7 @@ func CreateSignerPublicKeyPrompt(key, password string) (signer ssh.Signer, err e
 	key = getAbsPath(key)
 
 	// Read PrivateKey file
-	keyData, err := ioutil.ReadFile(key)
+	keyData, err := os.ReadFile(key)
 	if err != nil {
 		return
 	}
@@ -139,7 +139,7 @@ func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.
 	cert = getAbsPath(cert)
 
 	// Read Cert file
-	certData, err := ioutil.ReadFile(cert)
+	certData, err := os.ReadFile(cert)
 	if err != nil {
 		return
 	}
