@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
+	terminal "golang.org/x/term"
 )
 
 // Connect structure to store contents about ssh connection.
@@ -197,7 +197,6 @@ func (c *Connect) CheckClientAlive() error {
 
 // RequestTty requests the association of a pty with the session on the remote
 // host. Terminal size is obtained from the currently connected terminal
-//
 func RequestTty(session *ssh.Session) (err error) {
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,

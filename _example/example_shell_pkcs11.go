@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 
-	sshlib "github.com/blacknon/go-sshlib"
+	sshlib "github.com/abakum/go-sshlib
 )
 
 var (
@@ -41,7 +41,7 @@ func main() {
 	}
 
 	// If you use ssh-agent forwarding, uncomment it.
-	// con.ConnectSshAgent()
+	con.ConnectSshAgent()
 
 	// Connect ssh server
 	err = con.CreateClient(host, port, user, authMethod)

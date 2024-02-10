@@ -25,9 +25,9 @@ func (c *Connect) AddKeySshAgent(sshAgent interface{}, key interface{}) {
 	}
 
 	switch ag := sshAgent.(type) {
-	case agent.Agent:
-		ag.Add(addedKey)
 	case agent.ExtendedAgent:
+		ag.Add(addedKey)
+	case agent.Agent:
 		ag.Add(addedKey)
 	}
 }
@@ -36,9 +36,9 @@ func (c *Connect) AddKeySshAgent(sshAgent interface{}, key interface{}) {
 func (c *Connect) ForwardSshAgent(session *ssh.Session) {
 	// forward ssh-agent
 	switch ag := c.Agent.(type) {
-	case agent.Agent:
-		agent.ForwardToAgent(c.Client, ag)
 	case agent.ExtendedAgent:
+		agent.ForwardToAgent(c.Client, ag)
+	case agent.Agent:
 		agent.ForwardToAgent(c.Client, ag)
 	}
 

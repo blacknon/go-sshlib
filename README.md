@@ -1,7 +1,7 @@
 go-sshlib
 ====
 
-[![GoDoc](https://godoc.org/github.com/blacknon/go-sshlib?status.svg)](https://godoc.org/github.com/blacknon/go-sshlib)
+[![GoDoc](https://godoc.org/github.com/abakum/go-sshlib?status.svg)](https://godoc.org/github.com/abakum/go-sshlib)
 
 ## About
 
@@ -14,11 +14,11 @@ If use **pkcs11** authentication, cgo must be enabled.
 
 ## Usage
 
-[See GoDoc reference.](https://godoc.org/github.com/blacknon/go-sshlib)
+[See GoDoc reference.](https://godoc.org/github.com/abakum/go-sshlib)
 
 ## Download
 
-    GO111MODULE=on go get github.com/blacknon/go-sshlib
+    GO111MODULE=on go get github.com/abakum/go-sshlib
 
 ## Example
 
@@ -37,7 +37,7 @@ If use **pkcs11** authentication, cgo must be enabled.
         "fmt"
         "os"
 
-        sshlib "github.com/blacknon/go-sshlib"
+        sshlib "github.com/abakum/go-sshlib"
         "golang.org/x/crypto/ssh"
     )
 

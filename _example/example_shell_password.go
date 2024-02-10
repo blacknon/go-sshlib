@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 
-	sshlib "github.com/blacknon/go-sshlib"
+	sshlib "github.com/abakum/go-sshlib
 	"golang.org/x/crypto/ssh"
 )
 

@@ -60,7 +60,8 @@ func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) 
 func CreateSignerPublicKeyData(keyData []byte, password string) (signer ssh.Signer, err error) {
 	if password != "" { // password is not empty
 		// Parse key data
-		data, err := sshkeys.ParseEncryptedRawPrivateKey(keyData, []byte(password))
+		var data interface{}
+		data, err = sshkeys.ParseEncryptedRawPrivateKey(keyData, []byte(password))
 		if err != nil {
 			return signer, err
 		}
@@ -71,7 +72,7 @@ func CreateSignerPublicKeyData(keyData []byte, password string) (signer ssh.Sign
 		signer, err = ssh.ParsePrivateKey(keyData)
 	}
 
-	return
+	return signer, err
 }
 
 // CreateSignerPublicKeyPrompt rapper CreateSignerPKCS11.
@@ -152,7 +153,7 @@ func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.
 	// Create Certificate Struct
 	certificate, ok := pubkey.(*ssh.Certificate)
 	if !ok {
-		err = fmt.Errorf("%s\n", "Error: Not create certificate struct data")
+		err = fmt.Errorf("%s", "Error: Not create certificate struct data")
 		return
 	}
 
@@ -169,9 +170,9 @@ func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.
 // In sshAgent, put agent.Agent or agent.ExtendedAgent.
 func CreateSignerAgent(sshAgent interface{}) (signers []ssh.Signer, err error) {
 	switch ag := sshAgent.(type) {
-	case agent.Agent:
-		signers, err = ag.Signers()
 	case agent.ExtendedAgent:
+		signers, err = ag.Signers()
+	case agent.Agent:
 		signers, err = ag.Signers()
 	}
 

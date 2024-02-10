@@ -141,7 +141,7 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 							printLine = vtclean.Clean(printLine, false)
 						}
 
-						fmt.Fprintf(logfile, printLine)
+						fmt.Fprint(logfile, printLine)
 						preLine = []byte{}
 					}
 				} else {

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/blacknon/go-sshlib"
+	"github.com/abakum/go-sshlib"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -23,14 +23,14 @@ var (
 	// user = "root"
 
 	// sshd of OpenSSH on Windows
-	// host = "10.161.115.189"
-	// port = "22"
-	// user = "user_"
+	host = "10.161.115.189"
+	port = "22"
+	user = "user_"
 
 	// sshd of gliderlabs on Windows
-	host = "10.161.115.189"
-	port = "2222"
-	user = "user_"
+	// host = "10.161.115.189"
+	// port = "2222"
+	// user = "user_"
 )
 
 func main() {

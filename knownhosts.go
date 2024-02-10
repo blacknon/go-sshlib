@@ -105,7 +105,7 @@ func (c *Connect) verifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 		line = 0
 	}
 
-	err = writeKnownHostsKey(filepath, line, hostname, remote, key)
+	writeKnownHostsKey(filepath, line, hostname, remote, key)
 
 	return nil
 }
