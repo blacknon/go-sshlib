@@ -78,6 +78,10 @@ type Connect struct {
 	// Forward x11 flag.
 	ForwardX11 bool
 
+	// ClientVersion contains the version identification string that will
+	// be used for the connection. If empty, a reasonable default is used.
+	ClientVersion string
+
 	// shell terminal log flag
 	logging bool
 
@@ -102,9 +106,10 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 
 	// Create new ssh.ClientConfig{}
 	config := &ssh.ClientConfig{
-		User:    user,
-		Auth:    authMethods,
-		Timeout: time.Duration(timeout) * time.Second,
+		User:          user,
+		Auth:          authMethods,
+		Timeout:       time.Duration(timeout) * time.Second,
+		ClientVersion: c.ClientVersion,
 	}
 
 	if c.CheckKnownHosts {
