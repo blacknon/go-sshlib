@@ -13,22 +13,16 @@ import (
 
 	"github.com/Microsoft/go-winio"
 	"github.com/abakum/pageant"
-	"golang.org/x/crypto/ssh/agent"
 )
 
-// ConnectSshAgent
-func ConnectSshAgent() (ag AgentInterface) {
+func NewConn() (sock net.Conn, err error) {
 	const (
 		PIPE         = `\\.\pipe\`
 		sshAgentPipe = "openssh-ssh-agent"
 	)
-	var (
-		sock net.Conn
-		err  error
-	)
 	// Get env "SSH_AUTH_SOCK" and connect.
-	sockPath := os.Getenv("SSH_AUTH_SOCK")
-	emptySockPath := len(sockPath) == 0
+	IdentityAgent := os.Getenv("SSH_AUTH_SOCK")
+	emptySockPath := IdentityAgent == ""
 
 	if emptySockPath {
 		sock, err = pageant.NewConn()
@@ -36,25 +30,18 @@ func ConnectSshAgent() (ag AgentInterface) {
 
 	if err != nil && !emptySockPath {
 		// `sc query afunix` for some versions of Windows
-		sock, err = net.Dial("unix", sockPath)
+		sock, err = net.Dial("unix", IdentityAgent)
 	}
 
 	if err != nil {
 		if emptySockPath {
-			sockPath = sshAgentPipe
+			IdentityAgent = sshAgentPipe
 		}
-		if !strings.HasPrefix(sockPath, PIPE) {
-			sockPath = PIPE + sockPath
+		if !strings.HasPrefix(IdentityAgent, PIPE) {
+			IdentityAgent = PIPE + IdentityAgent
 		}
-		sock, err = winio.DialPipe(sockPath, nil)
+		sock, err = winio.DialPipe(IdentityAgent, nil)
 	}
+	return sock, err
 
-	if err != nil {
-		ag = agent.NewKeyring()
-	} else {
-		// connect SSH_AUTH_SOCK
-		ag = agent.NewClient(sock)
-	}
-
-	return
 }

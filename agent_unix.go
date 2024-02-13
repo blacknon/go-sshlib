@@ -9,22 +9,12 @@ package sshlib
 import (
 	"net"
 	"os"
-
-	"golang.org/x/crypto/ssh/agent"
 )
 
-// ConnectSshAgent
-func ConnectSshAgent() (ag AgentInterface) {
+func NewConn() (sock net.Conn, err error) {
 	// Get env "SSH_AUTH_SOCK" and connect.
-	sockPath := os.Getenv("SSH_AUTH_SOCK")
-	sock, err := net.Dial("unix", sockPath)
-
-	if err != nil {
-		ag = agent.NewKeyring()
-	} else {
-		// connect SSH_AUTH_SOCK
-		ag = agent.NewClient(sock)
-	}
+	IdentityAgent := os.Getenv("SSH_AUTH_SOCK")
+	sock, err := net.Dial("unix", IdentityAgent)
 
 	return
 }

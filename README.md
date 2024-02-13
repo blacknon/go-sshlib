@@ -64,7 +64,7 @@ If use **pkcs11** authentication, cgo must be enabled.
         // Create ssh.AuthMethod
         authMethod := sshlib.CreateAuthMethodPassword(password)
 
-        // If you use ssh-agent forwarding, uncomment it.
+        // If you use ssh-agent, uncomment it.
         // con.ConnectSshAgent()
 
         // Connect ssh server

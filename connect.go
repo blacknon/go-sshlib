@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/net/proxy"
 	"golang.org/x/term"
 )
@@ -119,6 +120,15 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 		config.HostKeyCallback = c.verifyAndAppendNew
 	} else {
 		config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+	}
+
+	if c.Agent != nil {
+		switch ag := c.Agent.(type) {
+		case agent.ExtendedAgent:
+			config.Auth = append(config.Auth, ssh.PublicKeysCallback(ag.Signers))
+		case agent.Agent:
+			config.Auth = append(config.Auth, ssh.PublicKeysCallback(ag.Signers))
+		}
 	}
 
 	// check Dialer

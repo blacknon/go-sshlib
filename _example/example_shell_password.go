@@ -13,14 +13,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/abakum/go-sshlib
+	"github.com/abakum/go-sshlib"
 	"golang.org/x/crypto/ssh"
 )
 
 var (
-	host     = "target.com"
+	// host     = "10.161.115.160"
+	// port     = "22"
+	// user     = "root"
+	host     = "10.161.115.189"
 	port     = "22"
-	user     = "user"
+	user     = "user_"
 	password = "password"
 
 	termlog = "./test_termlog"
@@ -40,8 +43,8 @@ func main() {
 	// Create ssh.AuthMethod
 	authMethod := sshlib.CreateAuthMethodPassword(password)
 
-	// If you use ssh-agent forwarding, uncomment it.
-	// con.ConnectSshAgent()
+	// If you use ssh-agent, uncomment it.
+	con.ConnectSshAgent()
 
 	// Connect ssh server
 	err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod})
@@ -51,7 +54,8 @@ func main() {
 	}
 
 	// Set terminal log
-	con.SetLog(termlog, false)
+	// con.SetLog(termlog, true)
+	con.SetLogWithRemoveAnsiCode(termlog, false)
 
 	// Create Session
 	session, err := con.CreateSession()

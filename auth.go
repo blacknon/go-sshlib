@@ -13,6 +13,7 @@ package sshlib
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"regexp"
 	"strings"
@@ -36,6 +37,50 @@ func CreateAuthMethodPublicKey(key, password string) (auth ssh.AuthMethod, err e
 	}
 
 	auth = ssh.PublicKeys(signer)
+	return
+}
+
+// CreateAuthMethodCertificate returns ssh.AuthMethod generated from Certificate.
+// To generate an AuthMethod from a certificate, you will need the certificate's private key Signer.
+// Signer should be generated from CreateSignerPublicKey() or CreateSignerPKCS11().
+func CreateAuthMethodCertificate(cert string, keySigner ssh.Signer) (auth ssh.AuthMethod, err error) {
+	signer, err := CreateSignerCertificate(cert, keySigner)
+	if err != nil {
+		return
+	}
+
+	auth = ssh.PublicKeys(signer)
+	return
+}
+
+// CreateAuthMethodAgent returns ssh.AuthMethod from con.Agent.
+// case con.Agent is nil then ConnectSshAgent to it
+func CreateAuthMethodAgent(con *Connect) (auth ssh.AuthMethod, err error) {
+	if con != nil && con.Agent != nil {
+		switch ag := con.Agent.(type) {
+		case agent.ExtendedAgent:
+			auth = ssh.PublicKeysCallback(ag.Signers)
+		case agent.Agent:
+			auth = ssh.PublicKeysCallback(ag.Signers)
+		}
+		return
+	}
+	var sock net.Conn
+	sock, err = NewConn()
+	if err != nil {
+		return nil, err
+	}
+	defer sock.Close()
+
+	ag := agent.NewClient(sock)
+	auth = ssh.PublicKeysCallback(ag.Signers)
+	if con == nil {
+		return
+	}
+	if con.Agent == nil {
+		con.Agent = ag
+	}
+
 	return
 }
 
@@ -75,7 +120,7 @@ func CreateSignerPublicKeyData(keyData []byte, password string) (signer ssh.Sign
 	return signer, err
 }
 
-// CreateSignerPublicKeyPrompt rapper CreateSignerPKCS11.
+// CreateSignerPublicKeyPrompt wrapper CreateSignerPKCS11.
 // Output a passphrase input prompt if the passphrase is not entered or incorrect.
 //
 // Only Support UNIX-like OS.
@@ -115,19 +160,6 @@ func CreateSignerPublicKeyPrompt(key, password string) (signer ssh.Signer, err e
 		}
 	}
 
-	return
-}
-
-// CreateAuthMethodCertificate returns ssh.AuthMethod generated from Certificate.
-// To generate an AuthMethod from a certificate, you will need the certificate's private key Signer.
-// Signer should be generated from CreateSignerPublicKey() or CreateSignerPKCS11().
-func CreateAuthMethodCertificate(cert string, keySigner ssh.Signer) (auth ssh.AuthMethod, err error) {
-	signer, err := CreateSignerCertificate(cert, keySigner)
-	if err != nil {
-		return
-	}
-
-	auth = ssh.PublicKeys(signer)
 	return
 }
 
@@ -175,29 +207,6 @@ func CreateSignerAgent(sshAgent interface{}) (signers []ssh.Signer, err error) {
 	case agent.Agent:
 		signers, err = ag.Signers()
 	}
-
-	return
-}
-
-// CreateAuthMethodAgent returns ssh.AuthMethod from con.Agent.
-// case con.Agent is nil then ConnectSshAgent to it
-func CreateAuthMethodAgent(con *Connect) (auth ssh.AuthMethod, err error) {
-	var ag AgentInterface
-	if con == nil {
-		ag = ConnectSshAgent()
-	} else {
-		if con.Agent == nil {
-			ag = ConnectSshAgent()
-			con.Agent = ag
-		} else {
-			ag = con.Agent
-		}
-	}
-	signers, err := CreateSignerAgent(ag)
-	if err != nil {
-		return
-	}
-	auth = ssh.PublicKeys(signers...)
 
 	return
 }

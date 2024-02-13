@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/lunixbochs/vtclean"
+	"github.com/abakum/go-ansiterm"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/term"
 )
@@ -137,8 +137,10 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 							// NOTE:
 							//     In vtclean.Clean, the beginning of the line is deleted for some reason.
 							//     for that reason, one character add at line head.
-							printLine = "." + printLine
-							printLine = vtclean.Clean(printLine, false)
+							// printLine = "." + printLine
+							// printLine = vtclean.Clean(printLine, false)
+							printLine, _ = ansiterm.StripBytes([]byte(printLine), ansiterm.WithFe(true))
+							printLine += "\n"
 						}
 
 						fmt.Fprint(logfile, printLine)

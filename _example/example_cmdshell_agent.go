@@ -13,24 +13,26 @@ import (
 	"os"
 
 	"github.com/abakum/go-sshlib"
-	"golang.org/x/crypto/ssh"
 )
 
 var (
 	// dropbear on linux
-	// host = "10.161.115.160"
-	// port = "22"
-	// user = "root"
+	// host    = "10.161.115.160"
+	// port    = "22"
+	// user    = "root"
+	// command = "ssh user_@10.161.115.189"
 
 	// sshd of OpenSSH on Windows
-	host = "10.161.115.189"
-	port = "22"
-	user = "user_"
+	// host    = "10.161.115.189"
+	// port    = "22"
+	// user    = "user_"
+	// command = "ssh root@10.161.115.160"
 
 	// sshd of gliderlabs on Windows
-	// host = "10.161.115.189"
-	// port = "2222"
-	// user = "user_"
+	host    = "10.161.115.189"
+	port    = "2222"
+	user    = "user_"
+	command = "ssh root@10.161.115.160"
 )
 
 func main() {
@@ -39,22 +41,17 @@ func main() {
 		// If you use x11 forwarding, please uncomment next line.
 		// ForwardX11: true,
 
-		// If you use ssh-agent forwarding, uncomment next line.
+		// If you use ssh-agent forwarding, please set to true.
+		// And after, run `con.ConnectSshAgent()`.
 		ForwardAgent: true,
-
-		// If you use ssh-agent forwarding, and not use sshlib.CreateAuthMethodAgent(con), uncomment next line.
-		// Agent:        sshlib.ConnectSshAgent(),
 	}
 
-	// Create ssh.AuthMethods
-	authMethod, err := sshlib.CreateAuthMethodAgent(con)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	// setup con.Agent for use ssh-agent
+	con.ConnectSshAgent()
 
 	// Connect ssh server
-	err = con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod})
+	// set authMethods to nil for use ssh-agent
+	err := con.CreateClient(host, port, user, nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -67,6 +64,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Start ssh shell
-	con.Shell(session)
+	// Start ssh shell with command
+	con.CmdShell(session, command)
 }

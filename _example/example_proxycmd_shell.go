@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"os"
 
-	 "github.com/abakum/go-sshlib
+	"github.com/abakum/go-sshlib"
 	"golang.org/x/crypto/ssh"
 )
 

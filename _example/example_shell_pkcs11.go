@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/abakum/go-sshlib
+	"github.com/abakum/go-sshlib"
 )
 
 var (
@@ -34,17 +34,17 @@ func main() {
 	}
 
 	// Create ssh.AuthMethod
-	authMethod, err := sshlib.CreateAuthMethodPKCS11("/usr/local/opt/opensc/lib/opensc-pkcs11.so", "")
+	authMethods, err := sshlib.CreateAuthMethodPKCS11("/usr/local/opt/opensc/lib/opensc-pkcs11.so", "")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// If you use ssh-agent forwarding, uncomment it.
+	// If you use ssh-agent, uncomment it.
 	con.ConnectSshAgent()
 
 	// Connect ssh server
-	err = con.CreateClient(host, port, user, authMethod)
+	err = con.CreateClient(host, port, user, authMethods)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

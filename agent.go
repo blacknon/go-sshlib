@@ -12,7 +12,7 @@ import (
 // AgentInterface Interface for storing agent.Agent or agent.ExtendedAgent.
 type AgentInterface interface{}
 
-// AddKeySshAgent is rapper agent.Add().
+// AddKeySshAgent is wrapper agent.Add().
 // key must be a *rsa.PrivateKey, *dsa.PrivateKey or
 // *ecdsa.PrivateKey, which will be inserted into the agent.
 //
@@ -44,3 +44,33 @@ func (c *Connect) ForwardSshAgent(session *ssh.Session) {
 
 	agent.RequestAgentForwarding(session)
 }
+
+func (c *Connect) ConnectSshAgent() {
+	sock, err := NewConn()
+
+	if err != nil {
+		c.Agent = agent.NewKeyring()
+	} else {
+		defer sock.Close()
+		c.Agent = agent.NewClient(sock)
+	}
+}
+
+/*
+IdentityAgent
+         Specifies the UNIX-domain socket used to communicate with the
+         authentication agent.
+
+         This option overrides the SSH_AUTH_SOCK environment variable and
+         can be used to select a specific agent.  Setting the socket name
+         to none disables the use of an authentication agent.  If the
+         string "SSH_AUTH_SOCK" is specified, the location of the socket
+         will be read from the SSH_AUTH_SOCK environment variable.
+         Otherwise if the specified value begins with a ‘$’ character,
+         then it will be treated as an environment variable containing the
+         location of the socket.
+
+         Arguments to IdentityAgent may use the tilde syntax to refer to a
+         user's home directory or the tokens described in the TOKENS
+         section.
+*/

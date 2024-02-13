@@ -43,7 +43,7 @@ It is example code. simple connect ssh shell. You can also do tab completion, se
 		// Create ssh.AuthMethod
 		authMethod := sshlib.CreateAuthMethodPassword(password)
 
-		// If you use ssh-agent forwarding, uncomment it.
+		// If you use ssh-agent, uncomment it.
 		// con.ConnectSshAgent()
 
 		// Connect ssh server
