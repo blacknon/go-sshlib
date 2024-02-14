@@ -28,7 +28,7 @@ var (
 
 	// sshd of OpenSSH on Windows
 	host1 = "10.161.115.189"
-	port1 = "22"
+	port1 = "2222"
 	user1 = "user_"
 
 	// Target ssh server
@@ -50,16 +50,14 @@ func main() {
 	// Create proxy sshlib.Connect
 	proxyCon := &sshlib.Connect{}
 
-	// Create ssh.AuthMethod
-	// case agent forwarding not used do not store ConnectSshAgent() to proxyCon.Agent
-	AuthMethod, err := sshlib.CreateAuthMethodAgent(nil)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	// // Connect to ssh-agent
+	// proxyCon.ConnectSshAgent()
+
+	// Create ssh.AuthMethod from ssh-agent for target
+	AuthMethod := proxyCon.CreateAuthMethodAgent()
 
 	// Connect proxy server
-	err = proxyCon.CreateClient(host1, port1, user1, []ssh.AuthMethod{AuthMethod})
+	err := proxyCon.CreateClient(host1, port1, user1, nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -84,13 +82,5 @@ func main() {
 	// Set terminal log
 	// targetCon.SetLog(termlog, false)
 
-	// Create Session
-	session, err := targetCon.CreateSession()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	// Start ssh shell
-	targetCon.Shell(session)
+	targetCon.Shell(nil)
 }

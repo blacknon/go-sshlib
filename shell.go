@@ -13,12 +13,23 @@ import (
 	"time"
 
 	"github.com/abakum/go-ansiterm"
+	termm "github.com/abakum/term"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/term"
 )
 
 // Shell connect login shell over ssh.
+// If session is nil then session will be created.
 func (c *Connect) Shell(session *ssh.Session) (err error) {
+	if session == nil && c.Session == nil {
+		session, err = c.CreateSession()
+		if err != nil {
+			return
+		}
+		c.Session = session
+	}
+	defer func() { c.Session = nil }()
+
 	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
 	state, err := term.MakeRaw(fd)
@@ -26,6 +37,9 @@ func (c *Connect) Shell(session *ssh.Session) (err error) {
 		return
 	}
 	defer term.Restore(fd, state)
+
+	// set FD
+	session.Stdin, session.Stdout, session.Stderr = GetStdin(), os.Stdout, os.Stderr
 
 	// setup
 	err = c.setupShell(session)
@@ -43,16 +57,22 @@ func (c *Connect) Shell(session *ssh.Session) (err error) {
 	go c.SendKeepAlive(session)
 
 	err = session.Wait()
-	if err != nil {
-		return
-	}
-
 	return
 }
 
 // Shell connect command shell over ssh.
 // Used to start a shell with a specified command.
+// If session is nil then session will be created.
 func (c *Connect) CmdShell(session *ssh.Session, command string) (err error) {
+	if session == nil && c.Session == nil {
+		session, err = c.CreateSession()
+		if err != nil {
+			return
+		}
+		c.Session = session
+	}
+	defer func() { c.Session = nil }()
+
 	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
 	state, err := term.MakeRaw(fd)
@@ -60,6 +80,9 @@ func (c *Connect) CmdShell(session *ssh.Session, command string) (err error) {
 		return
 	}
 	defer term.Restore(fd, state)
+
+	// set FD
+	session.Stdin, session.Stdout, session.Stderr = GetStdin(), os.Stdout, os.Stderr
 
 	// setup
 	err = c.setupShell(session)
@@ -134,11 +157,6 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 
 						// remove ansi code.
 						if c.logRemoveAnsiCode {
-							// NOTE:
-							//     In vtclean.Clean, the beginning of the line is deleted for some reason.
-							//     for that reason, one character add at line head.
-							// printLine = "." + printLine
-							// printLine = vtclean.Clean(printLine, false)
 							printLine, _ = ansiterm.StripBytes([]byte(printLine), ansiterm.WithFe(true))
 							printLine += "\n"
 						}
@@ -157,12 +175,6 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 }
 
 func (c *Connect) setupShell(session *ssh.Session) (err error) {
-	// set FD
-	stdin := GetStdin()
-	session.Stdin = stdin
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-
 	// Logging
 	if c.logging {
 		err = c.logger(session)
@@ -192,5 +204,58 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 		c.ForwardSshAgent(session)
 	}
 
+	return
+}
+
+// ShellAnsi connect login shell over ssh for Windows without VTP
+// If session is nil then session will be created.
+func (c *Connect) ShellAnsi(session *ssh.Session, emulate bool) (err error) {
+	if session == nil && c.Session == nil {
+		session, err = c.CreateSession()
+		if err != nil {
+			return
+		}
+		c.Session = session
+	}
+	defer func() { c.Session = nil }()
+
+	// Set Stdin, Stdout, Stderr...
+	std := termm.NewIOE()
+	defer std.Close()
+	session.Stdin = std.ReadCloser()
+
+	session.Stdout = os.Stdout
+	session.Stdout = os.Stderr
+	if emulate {
+		wo, do, err := termm.StdOE(os.Stdout)
+		if err == nil {
+			//Win7
+			defer do.Close()
+			c.Session.Stdout = wo
+		}
+
+		we, de, err := termm.StdOE(os.Stderr)
+		if err == nil {
+			defer de.Close()
+			c.Session.Stderr = we
+		}
+	}
+
+	// setup
+	err = c.setupShell(c.Session)
+	if err != nil {
+		return
+	}
+
+	// Start shell
+	err = c.Session.Shell()
+	if err != nil {
+		return
+	}
+
+	// keep alive packet
+	go c.SendKeepAlive(c.Session)
+
+	err = c.Session.Wait()
 	return
 }

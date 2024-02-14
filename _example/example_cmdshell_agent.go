@@ -57,13 +57,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create Session
-	session, err := con.CreateSession()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	// Start ssh shell with command
-	con.CmdShell(session, command)
+	con.CmdShell(nil, command)
 }

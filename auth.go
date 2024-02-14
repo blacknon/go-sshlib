@@ -13,7 +13,6 @@ package sshlib
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"regexp"
 	"strings"
@@ -53,34 +52,18 @@ func CreateAuthMethodCertificate(cert string, keySigner ssh.Signer) (auth ssh.Au
 	return
 }
 
-// CreateAuthMethodAgent returns ssh.AuthMethod from con.Agent.
-// case con.Agent is nil then ConnectSshAgent to it
-func CreateAuthMethodAgent(con *Connect) (auth ssh.AuthMethod, err error) {
-	if con != nil && con.Agent != nil {
-		switch ag := con.Agent.(type) {
-		case agent.ExtendedAgent:
-			auth = ssh.PublicKeysCallback(ag.Signers)
-		case agent.Agent:
-			auth = ssh.PublicKeysCallback(ag.Signers)
-		}
-		return
+// CreateAuthMethodAgent returns ssh.AuthMethod from ssh-agent.
+// case c.Agent is nil then ConnectSshAgent to it
+func (c *Connect) CreateAuthMethodAgent() (auth ssh.AuthMethod) {
+	if c.Agent == nil {
+		c.ConnectSshAgent()
 	}
-	var sock net.Conn
-	sock, err = NewConn()
-	if err != nil {
-		return nil, err
+	switch ag := c.Agent.(type) {
+	case agent.ExtendedAgent:
+		auth = ssh.PublicKeysCallback(ag.Signers)
+	case agent.Agent:
+		auth = ssh.PublicKeysCallback(ag.Signers)
 	}
-	defer sock.Close()
-
-	ag := agent.NewClient(sock)
-	auth = ssh.PublicKeysCallback(ag.Signers)
-	if con == nil {
-		return
-	}
-	if con.Agent == nil {
-		con.Agent = ag
-	}
-
 	return
 }
 

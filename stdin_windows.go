@@ -9,13 +9,13 @@ package sshlib
 import (
 	"io"
 
-	windowsconsole "github.com/abakum/term/windows"
+	termw "github.com/abakum/term/windows"
 	"golang.org/x/sys/windows"
 )
 
 func GetStdin() io.ReadCloser {
 	h := uint32(windows.STD_INPUT_HANDLE)
-	stdin := windowsconsole.NewAnsiReader(int(h))
+	stdin := termw.NewAnsiReader(int(h))
 
 	return stdin
 }

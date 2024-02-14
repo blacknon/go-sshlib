@@ -22,7 +22,7 @@ var (
 	// port     = "22"
 	// user     = "root"
 	host     = "10.161.115.189"
-	port     = "22"
+	port     = "2222"
 	user     = "user_"
 	password = "password"
 
@@ -57,13 +57,6 @@ func main() {
 	// con.SetLog(termlog, true)
 	con.SetLogWithRemoveAnsiCode(termlog, false)
 
-	// Create Session
-	session, err := con.CreateSession()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	// Start ssh shell
-	con.Shell(session)
+	con.Shell(nil)
 }

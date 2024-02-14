@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 
+	termm "github.com/abakum/term"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -59,7 +60,7 @@ func (c *Connect) Command(command string) (err error) {
 	return
 }
 
-//
+// RequestTty, ForwardSshAgent, X11Forward
 func (c *Connect) setOption(session *ssh.Session) (err error) {
 	// Request tty
 	if c.TTY {
@@ -82,6 +83,57 @@ func (c *Connect) setOption(session *ssh.Session) (err error) {
 		}
 		err = nil
 	}
+
+	return
+}
+
+// CommandAnsi connect and run command over ssh for Windows without VTP.
+//
+// Output data is processed by channel because it is executed in parallel. If specification is troublesome, it is good to generate and process session from ssh package.
+func (c *Connect) CommandAnsi(command string, emulate, fixOpenSSH bool) (err error) {
+	// create session
+	if c.Session == nil {
+		c.Session, err = c.CreateSession()
+		if err != nil {
+			return
+		}
+	}
+	defer func() { c.Session = nil }()
+
+	// setup options
+	err = c.setOption(c.Session)
+	if err != nil {
+		return
+	}
+
+	// Set Stdin, Stdout, Stderr...
+	std := termm.NewIOE()
+	defer std.Close()
+	c.Session.Stdin = std.ReadCloser()
+
+	c.Session.Stdout = os.Stdout
+	c.Session.Stdout = os.Stderr
+	if emulate {
+		wo, do, err := termm.StdOE(os.Stdout)
+		if err == nil {
+			//Win7
+			defer do.Close()
+			c.Session.Stdout = wo
+		}
+
+		we, de, err := termm.StdOE(os.Stderr)
+		if err == nil {
+			defer de.Close()
+			c.Session.Stderr = we
+		}
+	}
+	if fixOpenSSH {
+		// fix sshd of OpenSSH
+		command += "&timeout/t 1"
+	}
+
+	// Run Command
+	err = c.Session.Run(command)
 
 	return
 }
