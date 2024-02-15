@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/crypto/ssh/terminal"
+	terminal "golang.org/x/term"
 )
 
 // getAbsPath return absolute path convert.
@@ -28,7 +28,7 @@ func getAbsPath(path string) string {
 
 // getPassphrase gets the passphrase from virtual terminal input and returns the result. Works only on UNIX-based OS.
 func getPassphrase(msg string) (input string, err error) {
-	fmt.Fprintf(os.Stderr, msg)
+	fmt.Fprint(os.Stderr, msg)
 
 	// Open /dev/tty
 	tty, err := os.Open("/dev/tty")

@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 
-	sshlib "github.com/blacknon/go-sshlib"
+	"github.com/abakum/go-sshlib"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -45,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// If you use ssh-agent forwarding, uncomment it.
+	// If you use ssh-agent, uncomment it.
 	// con.ConnectSshAgent()
 
 	// Connect ssh server

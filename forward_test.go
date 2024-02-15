@@ -24,7 +24,7 @@ func TestGetDisplay(t *testing.T) {
 	}
 }
 
-func ExampleConnect_TCPForward() {
+func ExampleConnect_TCPLocalForward() {
 	// host
 	host := "target.com"
 	port := "22"

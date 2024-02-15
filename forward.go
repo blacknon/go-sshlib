@@ -152,7 +152,7 @@ func readAuthority(hostname, display string) (
 	if len(fname) == 0 {
 		home := os.Getenv("HOME")
 		if len(home) == 0 {
-			err = errors.New("Xauthority not found: $XAUTHORITY, $HOME not set")
+			err = errors.New(" Xauthority not found: $XAUTHORITY, $HOME not set")
 			return "", nil, err
 		}
 		fname = home + "/.Xauthority"
@@ -226,7 +226,11 @@ func getString(r io.Reader, b []byte) (string, error) {
 // example) "127.0.0.1:22", "abc.com:9977"
 func (c *Connect) TCPLocalForward(localAddr, remoteAddr string) (err error) {
 	// create listner
-	listner, err := net.Listen("tcp", localAddr)
+	var (
+		local, remote net.Conn
+		listner       net.Listener
+	)
+	listner, err = net.Listen("tcp", localAddr)
 	if err != nil {
 		return
 	}
@@ -235,13 +239,13 @@ func (c *Connect) TCPLocalForward(localAddr, remoteAddr string) (err error) {
 	go func() {
 		for {
 			// local (type net.Conn)
-			local, err := listner.Accept()
+			local, err = listner.Accept()
 			if err != nil {
 				return
 			}
 
 			// remote (type net.Conn)
-			remote, err := c.Client.Dial("tcp", remoteAddr)
+			remote, err = c.Client.Dial("tcp", remoteAddr)
 
 			// forward
 			go c.forwarder(local, remote)

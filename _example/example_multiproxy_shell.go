@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"os"
 
-	sshlib "github.com/blacknon/go-sshlib"
+	"github.com/abakum/go-sshlib"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -59,8 +59,8 @@ func main() {
 
 	socks5Proxy := &sshlib.Proxy{
 		Type:      "socks5",
-		Addr:      httpProxyHost,
-		Port:      httpProxyPort,
+		Addr:      socks5ProxyHost,
+		Port:      socks5ProxyPort,
 		Forwarder: httpProxyDialer,
 	}
 	socks5ProxyDialer, err := httpProxy.CreateProxyDialer()

@@ -13,7 +13,7 @@ package sshlib
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -39,6 +39,34 @@ func CreateAuthMethodPublicKey(key, password string) (auth ssh.AuthMethod, err e
 	return
 }
 
+// CreateAuthMethodCertificate returns ssh.AuthMethod generated from Certificate.
+// To generate an AuthMethod from a certificate, you will need the certificate's private key Signer.
+// Signer should be generated from CreateSignerPublicKey() or CreateSignerPKCS11().
+func CreateAuthMethodCertificate(cert string, keySigner ssh.Signer) (auth ssh.AuthMethod, err error) {
+	signer, err := CreateSignerCertificate(cert, keySigner)
+	if err != nil {
+		return
+	}
+
+	auth = ssh.PublicKeys(signer)
+	return
+}
+
+// CreateAuthMethodAgent returns ssh.AuthMethod from ssh-agent.
+// case c.Agent is nil then ConnectSshAgent to it
+func (c *Connect) CreateAuthMethodAgent() (auth ssh.AuthMethod) {
+	if c.Agent == nil {
+		c.ConnectSshAgent()
+	}
+	switch ag := c.Agent.(type) {
+	case agent.ExtendedAgent:
+		auth = ssh.PublicKeysCallback(ag.Signers)
+	case agent.Agent:
+		auth = ssh.PublicKeysCallback(ag.Signers)
+	}
+	return
+}
+
 // CreateSignerPublicKey returns []ssh.Signer generated from public key.
 // If you have not specified a passphrase, please specify a empty character("").
 func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) {
@@ -46,7 +74,7 @@ func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) 
 	key = getAbsPath(key)
 
 	// Read PrivateKey file
-	keyData, err := ioutil.ReadFile(key)
+	keyData, err := os.ReadFile(key)
 	if err != nil {
 		return
 	}
@@ -60,7 +88,8 @@ func CreateSignerPublicKey(key, password string) (signer ssh.Signer, err error) 
 func CreateSignerPublicKeyData(keyData []byte, password string) (signer ssh.Signer, err error) {
 	if password != "" { // password is not empty
 		// Parse key data
-		data, err := sshkeys.ParseEncryptedRawPrivateKey(keyData, []byte(password))
+		var data interface{}
+		data, err = sshkeys.ParseEncryptedRawPrivateKey(keyData, []byte(password))
 		if err != nil {
 			return signer, err
 		}
@@ -71,10 +100,10 @@ func CreateSignerPublicKeyData(keyData []byte, password string) (signer ssh.Sign
 		signer, err = ssh.ParsePrivateKey(keyData)
 	}
 
-	return
+	return signer, err
 }
 
-// CreateSignerPublicKeyPrompt rapper CreateSignerPKCS11.
+// CreateSignerPublicKeyPrompt wrapper CreateSignerPKCS11.
 // Output a passphrase input prompt if the passphrase is not entered or incorrect.
 //
 // Only Support UNIX-like OS.
@@ -86,7 +115,7 @@ func CreateSignerPublicKeyPrompt(key, password string) (signer ssh.Signer, err e
 	key = getAbsPath(key)
 
 	// Read PrivateKey file
-	keyData, err := ioutil.ReadFile(key)
+	keyData, err := os.ReadFile(key)
 	if err != nil {
 		return
 	}
@@ -117,19 +146,6 @@ func CreateSignerPublicKeyPrompt(key, password string) (signer ssh.Signer, err e
 	return
 }
 
-// CreateAuthMethodCertificate returns ssh.AuthMethod generated from Certificate.
-// To generate an AuthMethod from a certificate, you will need the certificate's private key Signer.
-// Signer should be generated from CreateSignerPublicKey() or CreateSignerPKCS11().
-func CreateAuthMethodCertificate(cert string, keySigner ssh.Signer) (auth ssh.AuthMethod, err error) {
-	signer, err := CreateSignerCertificate(cert, keySigner)
-	if err != nil {
-		return
-	}
-
-	auth = ssh.PublicKeys(signer)
-	return
-}
-
 // CreateSignerCertificate returns ssh.Signer generated from Certificate.
 // To generate an AuthMethod from a certificate, you will need the certificate's private key Signer.
 // Signer should be generated from CreateSignerPublicKey() or CreateSignerPKCS11().
@@ -138,7 +154,7 @@ func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.
 	cert = getAbsPath(cert)
 
 	// Read Cert file
-	certData, err := ioutil.ReadFile(cert)
+	certData, err := os.ReadFile(cert)
 	if err != nil {
 		return
 	}
@@ -152,7 +168,7 @@ func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.
 	// Create Certificate Struct
 	certificate, ok := pubkey.(*ssh.Certificate)
 	if !ok {
-		err = fmt.Errorf("%s\n", "Error: Not create certificate struct data")
+		err = fmt.Errorf("%s", "Error: Not create certificate struct data")
 		return
 	}
 
@@ -169,9 +185,9 @@ func CreateSignerCertificate(cert string, keySigner ssh.Signer) (certSigner ssh.
 // In sshAgent, put agent.Agent or agent.ExtendedAgent.
 func CreateSignerAgent(sshAgent interface{}) (signers []ssh.Signer, err error) {
 	switch ag := sshAgent.(type) {
-	case agent.Agent:
-		signers, err = ag.Signers()
 	case agent.ExtendedAgent:
+		signers, err = ag.Signers()
+	case agent.Agent:
 		signers, err = ag.Signers()
 	}
 
