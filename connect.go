@@ -83,6 +83,12 @@ type Connect struct {
 	// be used for the connection. If empty, a reasonable default is used.
 	Version string
 
+	// HostKeyCallback is the function type used for verifying server keys.
+	// A HostKeyCallback must return nil if the host key is OK, or an error to reject it.
+	// It receives the hostname as passed to Dial or NewClientConn.
+	// The remote address is the RemoteAddr of the net.Conn underlying the SSH connection.
+	HostKeyCallback ssh.HostKeyCallback
+
 	// shell terminal log flag
 	logging bool
 
@@ -119,7 +125,11 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 		}
 		config.HostKeyCallback = c.verifyAndAppendNew
 	} else {
-		config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+		if c.HostKeyCallback == nil {
+			config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+		} else {
+			config.HostKeyCallback = c.HostKeyCallback
+		}
 	}
 
 	if c.Agent != nil {

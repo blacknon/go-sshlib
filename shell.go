@@ -174,6 +174,7 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 	return err
 }
 
+// logger, RequestTty, ForwardX11, ForwardAgent
 func (c *Connect) setupShell(session *ssh.Session) (err error) {
 	// Logging
 	if c.logging {
@@ -196,8 +197,8 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 		if err != nil {
 			log.Println(err)
 		}
+		err = nil
 	}
-	err = nil
 
 	// ssh agent forwarding
 	if c.ForwardAgent {
@@ -210,6 +211,7 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 // ShellAnsi connect login shell over ssh for Windows without VTP
 // If session is nil then session will be created.
 func (c *Connect) ShellAnsi(session *ssh.Session, emulate bool) (err error) {
+	// create session
 	if session == nil && c.Session == nil {
 		session, err = c.CreateSession()
 		if err != nil {
