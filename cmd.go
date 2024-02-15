@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/abakum/go-ansiterm"
 	termm "github.com/abakum/term"
 	"golang.org/x/crypto/ssh"
 )
@@ -135,5 +136,37 @@ func (c *Connect) CommandAnsi(command string, emulate, fixOpenSSH bool) (err err
 	// Run Command
 	err = c.Session.Run(command)
 
+	return
+}
+
+// Output runs cmd on the remote host and returns its standard output.
+func (c *Connect) Output(cmd string, pty bool) (bs []byte, err error) {
+	// create session
+	if c.Session == nil {
+		c.Session, err = c.CreateSession()
+		if err != nil {
+			return
+		}
+	}
+	tty := c.TTY
+	c.TTY = pty
+
+	defer func() {
+		c.Session = nil
+		c.TTY = tty
+	}()
+
+	// setup options
+	err = c.setOption(c.Session)
+	if err != nil {
+		return
+	}
+	bs, err = c.Session.Output(cmd)
+	if err != nil {
+		return
+	}
+	if pty {
+		bs, err = ansiterm.Strip(bs, ansiterm.WithFe(true))
+	}
 	return
 }
