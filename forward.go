@@ -6,17 +6,17 @@ package sshlib
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/armon/go-socks5"
+	xauth "github.com/blacknon/go-x11auth"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -34,17 +34,34 @@ type x11Request struct {
 //
 // Also, the value of COOKIE transfers the local value as it is. This will be addressed in the future.
 func (c *Connect) X11Forward(session *ssh.Session) (err error) {
-	display := getX11Display(os.Getenv("DISPLAY"))
-
-	_, xAuth, err := readAuthority("", strconv.Itoa(display))
-	if err != io.EOF && err != nil {
-		return
+	// get xauthority path
+	xauthorityPath := os.Getenv("XAUTHORITY")
+	if len(xauthorityPath) == 0 {
+		home := os.Getenv("HOME")
+		if len(home) == 0 {
+			err = errors.New("Xauthority not found: $XAUTHORITY, $HOME not set")
+			return err
+		}
+		xauthorityPath = home + "/.Xauthority"
 	}
 
-	var cookie string
-	for _, d := range xAuth {
-		cookie = cookie + fmt.Sprintf("%02x", d)
-	}
+	xa := xauth.XAuth{}
+	xa.Display = os.Getenv("DISPLAY")
+
+	cookie, err := xa.GetXAuthCookie(xauthorityPath, c.ForwardX11Trusted)
+
+	// // get display
+	// displayNumber := getX11DisplayNumber(os.Getenv("DISPLAY"))
+
+	// _, xAuth, err := readAuthority("", strconv.Itoa(displayNumber))
+	// if err != io.EOF && err != nil {
+	// 	return
+	// }
+
+	// var cookie string
+	// for _, d := range xAuth {
+	// 	cookie = cookie + fmt.Sprintf("%02x", d)
+	// }
 
 	// set x11-req Payload
 	payload := x11Request{
@@ -78,7 +95,7 @@ func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 }
 
 // x11Connect return net.Conn x11 socket.
-func x11Connect(display string) (conn net.Conn, err error) { 
+func x11Connect(display string) (conn net.Conn, err error) {
 	var conDisplay string
 
 	protocol := "unix"
@@ -88,12 +105,12 @@ func x11Connect(display string) (conn net.Conn, err error) {
 	} else if display[0] != ':' { // Forwarded display
 		protocol = "tcp"
 		if b, _, ok := strings.Cut(display, ":"); ok {
-			conDisplay = fmt.Sprintf("%v:%v", b, getX11Display(display) + 6000)
+			conDisplay = fmt.Sprintf("%v:%v", b, getX11DisplayNumber(display)+6000)
 		} else {
 			conDisplay = display
 		}
 	} else { // /tmp/.X11-unix/X0
-		conDisplay = fmt.Sprintf("/tmp/.X11-unix/X%v", getX11Display(display))
+		conDisplay = fmt.Sprintf("/tmp/.X11-unix/X%v", getX11DisplayNumber(display))
 	}
 
 	return net.Dial(protocol, conDisplay)
@@ -126,7 +143,7 @@ func x11forwarder(channel ssh.Channel) {
 }
 
 // getX11Display return X11 display number from env $DISPLAY
-func getX11Display(display string) int {
+func getX11DisplayNumber(display string) int {
 	colonIdx := strings.LastIndex(display, ":")
 	dotIdx := strings.LastIndex(display, ".")
 
@@ -138,7 +155,7 @@ func getX11Display(display string) int {
 		dotIdx = len(display)
 	}
 
-	i, err := strconv.Atoi(display[colonIdx+1:dotIdx])
+	i, err := strconv.Atoi(display[colonIdx+1 : dotIdx])
 	if err != nil {
 		return 0
 	}
@@ -146,95 +163,95 @@ func getX11Display(display string) int {
 	return i
 }
 
-// readAuthority Read env `$XAUTHORITY`. If not set value, read `~/.Xauthority`.
-func readAuthority(hostname, display string) (
-	name string, data []byte, err error) {
+// // readAuthority Read env `$XAUTHORITY`. If not set value, read `~/.Xauthority`.
+// func readAuthority(hostname, display string) (
+// 	name string, data []byte, err error) {
 
-	// b is a scratch buffer to use and should be at least 256 bytes long
-	// (i.e. it should be able to hold a hostname).
-	b := make([]byte, 256)
+// 	// b is a scratch buffer to use and should be at least 256 bytes long
+// 	// (i.e. it should be able to hold a hostname).
+// 	b := make([]byte, 256)
 
-	// As per /usr/include/X11/Xauth.h.
-	const familyLocal = 256
+// 	// As per /usr/include/X11/Xauth.h.
+// 	const familyLocal = 256
 
-	if len(hostname) == 0 || hostname == "localhost" {
-		hostname, err = os.Hostname()
-		if err != nil {
-			return "", nil, err
-		}
-	}
+// 	if len(hostname) == 0 || hostname == "localhost" {
+// 		hostname, err = os.Hostname()
+// 		if err != nil {
+// 			return "", nil, err
+// 		}
+// 	}
 
-	fname := os.Getenv("XAUTHORITY")
-	if len(fname) == 0 {
-		home := os.Getenv("HOME")
-		if len(home) == 0 {
-			err = errors.New("Xauthority not found: $XAUTHORITY, $HOME not set")
-			return "", nil, err
-		}
-		fname = home + "/.Xauthority"
-	}
+// 	fname := os.Getenv("XAUTHORITY")
+// 	if len(fname) == 0 {
+// 		home := os.Getenv("HOME")
+// 		if len(home) == 0 {
+// 			err = errors.New("Xauthority not found: $XAUTHORITY, $HOME not set")
+// 			return "", nil, err
+// 		}
+// 		fname = home + "/.Xauthority"
+// 	}
 
-	r, err := os.Open(fname)
-	if err != nil {
-		return "", nil, err
-	}
-	defer r.Close()
+// 	r, err := os.Open(fname)
+// 	if err != nil {
+// 		return "", nil, err
+// 	}
+// 	defer r.Close()
 
-	for {
-		var family uint16
-		if err := binary.Read(r, binary.BigEndian, &family); err != nil {
-			return "", nil, err
-		}
+// 	for {
+// 		var family uint16
+// 		if err := binary.Read(r, binary.BigEndian, &family); err != nil {
+// 			return "", nil, err
+// 		}
 
-		addr, err := getString(r, b)
-		if err != nil {
-			return "", nil, err
-		}
+// 		addr, err := getString(r, b)
+// 		if err != nil {
+// 			return "", nil, err
+// 		}
 
-		disp, err := getString(r, b)
-		if err != nil {
-			return "", nil, err
-		}
+// 		disp, err := getString(r, b)
+// 		if err != nil {
+// 			return "", nil, err
+// 		}
 
-		name0, err := getString(r, b)
-		if err != nil {
-			return "", nil, err
-		}
+// 		name0, err := getString(r, b)
+// 		if err != nil {
+// 			return "", nil, err
+// 		}
 
-		data0, err := getBytes(r, b)
-		if err != nil {
-			return "", nil, err
-		}
+// 		data0, err := getBytes(r, b)
+// 		if err != nil {
+// 			return "", nil, err
+// 		}
 
-		if family == familyLocal && addr == hostname && disp == display {
-			return name0, data0, nil
-		}
-	}
-}
+// 		if family == familyLocal && addr == hostname && disp == display {
+// 			return name0, data0, nil
+// 		}
+// 	}
+// }
 
-// getBytes use `readAuthority`
-func getBytes(r io.Reader, b []byte) ([]byte, error) {
-	var n uint16
-	if err := binary.Read(r, binary.BigEndian, &n); err != nil {
-		return nil, err
-	} else if n > uint16(len(b)) {
-		return nil, errors.New("bytes too long for buffer")
-	}
+// // getBytes use `readAuthority`
+// func getBytes(r io.Reader, b []byte) ([]byte, error) {
+// 	var n uint16
+// 	if err := binary.Read(r, binary.BigEndian, &n); err != nil {
+// 		return nil, err
+// 	} else if n > uint16(len(b)) {
+// 		return nil, errors.New("bytes too long for buffer")
+// 	}
 
-	if _, err := io.ReadFull(r, b[0:n]); err != nil {
-		return nil, err
-	}
-	return b[0:n], nil
-}
+// 	if _, err := io.ReadFull(r, b[0:n]); err != nil {
+// 		return nil, err
+// 	}
+// 	return b[0:n], nil
+// }
 
-// getString use `readAuthority`
-func getString(r io.Reader, b []byte) (string, error) {
-	b, err := getBytes(r, b)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}
+// // getString use `readAuthority`
+// func getString(r io.Reader, b []byte) (string, error) {
+// 	b, err := getBytes(r, b)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return string(b), nil
+// }
 
 // TCPLocalForward forwarding tcp data. Like Local port forward (ssh -L).
 // localAddr, remoteAddr is write as "address:port".
