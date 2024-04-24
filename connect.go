@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
+	terminal "golang.org/x/term"
 )
 
 // Connect structure to store contents about ssh connection.
@@ -77,6 +77,10 @@ type Connect struct {
 
 	// Forward x11 flag.
 	ForwardX11 bool
+
+	// Forward X11 trusted flag.
+	// This flag is ssh -Y option like flag.
+	ForwardX11Trusted bool
 
 	// shell terminal log flag
 	logging bool
@@ -197,7 +201,6 @@ func (c *Connect) CheckClientAlive() error {
 
 // RequestTty requests the association of a pty with the session on the remote
 // host. Terminal size is obtained from the currently connected terminal
-//
 func RequestTty(session *ssh.Session) (err error) {
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,
