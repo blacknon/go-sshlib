@@ -20,7 +20,7 @@ func TestGetDisplay(t *testing.T) {
 		{11, "localhost:11.0"},
 		{123, "randomhost:123.0"},
 	} {
-		if act := getX11Display(tc.input); act != tc.expect {
+		if act := getX11DisplayNumber(tc.input); act != tc.expect {
 			t.Errorf(`unexpected result for getX11Display("%s"), act="%v", exp="%v"`, tc.input, act, tc.expect)
 		}
 	}
@@ -50,7 +50,7 @@ func ExampleConnect_TCPForward() {
 	con.CreateClient(host, user, port, []ssh.AuthMethod{authMethod})
 }
 
-func ExampleConnect_X11Forward() {
+func TestConnect_X11Forward() {
 	// Create session
 	con := &Connect{}
 	session, err := con.CreateSession()
