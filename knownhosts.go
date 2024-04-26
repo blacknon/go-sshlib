@@ -82,7 +82,7 @@ func (c *Connect) verifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 
 	// check error
 	keyErr, ok := err.(*knownhosts.KeyError)
-	if !ok || len(keyErr.Want) > 0 {
+	if keyErr != nil && (!ok || len(keyErr.Want) > 0) {
 		for _, w := range keyErr.Want {
 			oldkey := w.String()
 			line = w.Line
