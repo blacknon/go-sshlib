@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -242,8 +243,16 @@ func (c *Connect) forwarder(local net.Conn, remote net.Conn) {
 // socks5Resolver prevents DNS from resolving on the local machine, rather than over the SSH connection.
 type socks5Resolver struct{}
 
+// Resolve
 func (socks5Resolver) Resolve(ctx context.Context, name string) (context.Context, net.IP, error) {
 	return ctx, nil, nil
+}
+
+func (c *Connect) getDynamicForwardLogger() *log.Logger {
+	if c.DynamicForwardLogger == nil {
+		return log.New(io.Discard, "", log.LstdFlags)
+	}
+	return c.DynamicForwardLogger
 }
 
 // TCPDynamicForward forwarding tcp data. Like Dynamic forward (`ssh -D <port>`).
@@ -255,6 +264,7 @@ func (c *Connect) TCPDynamicForward(address, port string) (err error) {
 			return c.Client.Dial(n, addr)
 		},
 		Resolver: socks5Resolver{},
+		Logger:   c.getDynamicForwardLogger(),
 	}
 
 	// Create Socks5 server
@@ -278,6 +288,7 @@ func (c *Connect) TCPReverseDynamicForward(address, port string) (err error) {
 			return net.Dial(n, addr)
 		},
 		Resolver: socks5Resolver{},
+		Logger:   c.getDynamicForwardLogger(),
 	}
 
 	// create listner
@@ -307,6 +318,9 @@ func (c *Connect) HTTPDynamicForward(address, port string) (err error) {
 	httpProxy.ConnectDial = func(n, addr string) (net.Conn, error) {
 		return c.Client.Dial(n, addr)
 	}
+
+	// set logger
+	httpProxy.Logger = c.getDynamicForwardLogger()
 
 	// listen
 	err = http.ListenAndServe(net.JoinHostPort(address, port), httpProxy)

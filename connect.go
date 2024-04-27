@@ -6,6 +6,7 @@ package sshlib
 
 import (
 	"io"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -49,6 +50,7 @@ type Connect struct {
 	ForwardAgent bool
 
 	// CheckKnownHosts if true, check knownhosts.
+	// Ignored if HostKeyCallback is set.
 	// Set it before CraeteClient.
 	CheckKnownHosts bool
 
@@ -92,6 +94,9 @@ type Connect struct {
 	// This flag is ssh -Y option like flag.
 	// Set it before CraeteClient.
 	ForwardX11Trusted bool
+
+	//
+	DynamicForwardLogger *log.Logger
 
 	// shell terminal log flag
 	logging bool
