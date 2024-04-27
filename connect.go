@@ -13,8 +13,9 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/net/proxy"
+	"golang.org/x/term"
 )
 
 // Connect structure to store contents about ssh connection.
@@ -78,6 +79,16 @@ type Connect struct {
 	// Forward x11 flag.
 	ForwardX11 bool
 
+	// Version contains the version identification string that will
+	// be used for the connection. If empty, a reasonable default is used.
+	Version string
+
+	// HostKeyCallback is the function type used for verifying server keys.
+	// A HostKeyCallback must return nil if the host key is OK, or an error to reject it.
+	// It receives the hostname as passed to Dial or NewClientConn.
+	// The remote address is the RemoteAddr of the net.Conn underlying the SSH connection.
+	HostKeyCallback ssh.HostKeyCallback
+
 	// shell terminal log flag
 	logging bool
 
@@ -114,7 +125,20 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 		}
 		config.HostKeyCallback = c.verifyAndAppendNew
 	} else {
-		config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+		if c.HostKeyCallback == nil {
+			config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+		} else {
+			config.HostKeyCallback = c.HostKeyCallback
+		}
+	}
+
+	if c.Agent != nil {
+		switch ag := c.Agent.(type) {
+		case agent.ExtendedAgent:
+			config.Auth = append(config.Auth, ssh.PublicKeysCallback(ag.Signers))
+		case agent.Agent:
+			config.Auth = append(config.Auth, ssh.PublicKeysCallback(ag.Signers))
+		}
 	}
 
 	// check Dialer
@@ -126,6 +150,11 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 	netConn, err := c.ProxyDialer.Dial("tcp", uri)
 	if err != nil {
 		return
+	}
+
+	// check Version
+	if c.Version != "" {
+		config.ClientVersion = "SSH-2.0-" + c.Version
 	}
 
 	// Create new ssh connect
@@ -197,7 +226,6 @@ func (c *Connect) CheckClientAlive() error {
 
 // RequestTty requests the association of a pty with the session on the remote
 // host. Terminal size is obtained from the currently connected terminal
-//
 func RequestTty(session *ssh.Session) (err error) {
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,
@@ -207,18 +235,18 @@ func RequestTty(session *ssh.Session) (err error) {
 
 	// Get terminal window size
 	fd := int(os.Stdout.Fd())
-	width, hight, err := terminal.GetSize(fd)
+	width, hight, err := term.GetSize(fd)
 	if err != nil {
 		return
 	}
 
 	// Get env `TERM`
-	term := os.Getenv("TERM")
-	if len(term) == 0 {
-		term = "xterm"
+	xterm := os.Getenv("TERM")
+	if len(xterm) == 0 {
+		xterm = "xterm"
 	}
 
-	if err = session.RequestPty(term, hight, width, modes); err != nil {
+	if err = session.RequestPty(xterm, hight, width, modes); err != nil {
 		session.Close()
 		return
 	}
@@ -233,7 +261,7 @@ func RequestTty(session *ssh.Session) (err error) {
 			switch s {
 			case winch:
 				fd := int(os.Stdout.Fd())
-				width, hight, _ = terminal.GetSize(fd)
+				width, hight, _ = term.GetSize(fd)
 				session.WindowChange(hight, width)
 			}
 		}

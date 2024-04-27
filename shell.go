@@ -12,20 +12,33 @@ import (
 	"os"
 	"time"
 
-	"github.com/lunixbochs/vtclean"
+	"github.com/abakum/go-ansiterm"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 // Shell connect login shell over ssh.
+// If session is nil then session will be created.
 func (c *Connect) Shell(session *ssh.Session) (err error) {
+	if session == nil && c.Session == nil {
+		session, err = c.CreateSession()
+		if err != nil {
+			return
+		}
+		c.Session = session
+	}
+	defer func() { c.Session = nil }()
+
 	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
-	state, err := terminal.MakeRaw(fd)
+	state, err := term.MakeRaw(fd)
 	if err != nil {
 		return
 	}
-	defer terminal.Restore(fd, state)
+	defer term.Restore(fd, state)
+
+	// set FD
+	session.Stdin, session.Stdout, session.Stderr = GetStdin(), os.Stdout, os.Stderr
 
 	// setup
 	err = c.setupShell(session)
@@ -43,23 +56,32 @@ func (c *Connect) Shell(session *ssh.Session) (err error) {
 	go c.SendKeepAlive(session)
 
 	err = session.Wait()
-	if err != nil {
-		return
-	}
-
 	return
 }
 
 // Shell connect command shell over ssh.
 // Used to start a shell with a specified command.
+// If session is nil then session will be created.
 func (c *Connect) CmdShell(session *ssh.Session, command string) (err error) {
+	if session == nil && c.Session == nil {
+		session, err = c.CreateSession()
+		if err != nil {
+			return
+		}
+		c.Session = session
+	}
+	defer func() { c.Session = nil }()
+
 	// Input terminal Make raw
 	fd := int(os.Stdin.Fd())
-	state, err := terminal.MakeRaw(fd)
+	state, err := term.MakeRaw(fd)
 	if err != nil {
 		return
 	}
-	defer terminal.Restore(fd, state)
+	defer term.Restore(fd, state)
+
+	// set FD
+	session.Stdin, session.Stdout, session.Stderr = GetStdin(), os.Stdout, os.Stderr
 
 	// setup
 	err = c.setupShell(session)
@@ -134,14 +156,11 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 
 						// remove ansi code.
 						if c.logRemoveAnsiCode {
-							// NOTE:
-							//     In vtclean.Clean, the beginning of the line is deleted for some reason.
-							//     for that reason, one character add at line head.
-							printLine = "." + printLine
-							printLine = vtclean.Clean(printLine, false)
+							printLine, _ = ansiterm.StripBytes([]byte(printLine), ansiterm.WithFe(true))
+							printLine += "\n"
 						}
 
-						fmt.Fprintf(logfile, printLine)
+						fmt.Fprint(logfile, printLine)
 						preLine = []byte{}
 					}
 				} else {
@@ -154,13 +173,8 @@ func (c *Connect) logger(session *ssh.Session) (err error) {
 	return err
 }
 
+// logger, RequestTty, ForwardX11, ForwardAgent
 func (c *Connect) setupShell(session *ssh.Session) (err error) {
-	// set FD
-	stdin := GetStdin()
-	session.Stdin = stdin
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-
 	// Logging
 	if c.logging {
 		err = c.logger(session)
@@ -182,8 +196,8 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 		if err != nil {
 			log.Println(err)
 		}
+		err = nil
 	}
-	err = nil
 
 	// ssh agent forwarding
 	if c.ForwardAgent {

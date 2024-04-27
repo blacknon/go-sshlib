@@ -6,6 +6,7 @@ package sshlib
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -81,7 +82,7 @@ func (c *Connect) verifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 
 	// check error
 	keyErr, ok := err.(*knownhosts.KeyError)
-	if !ok || len(keyErr.Want) > 0 {
+	if keyErr != nil && (!ok || len(keyErr.Want) > 0) {
 		for _, w := range keyErr.Want {
 			oldkey := w.String()
 			line = w.Line
@@ -105,7 +106,7 @@ func (c *Connect) verifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 		line = 0
 	}
 
-	err = writeKnownHostsKey(filepath, line, hostname, remote, key)
+	writeKnownHostsKey(filepath, line, hostname, remote, key)
 
 	return nil
 }
@@ -267,4 +268,31 @@ func writeKnownHostsKey(filepath string, linenum int, hostname string, remote ne
 	}
 
 	return
+}
+
+type hostKeys struct {
+	keys []ssh.PublicKey
+}
+
+func (f *hostKeys) check(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	if len(f.keys) == 0 {
+		return fmt.Errorf("ssh: no required host keys")
+	}
+	km := key.Marshal()
+	for _, fKey := range f.keys {
+		if fKey == nil {
+			continue
+		}
+		if bytes.Equal(km, fKey.Marshal()) {
+			return nil
+		}
+	}
+	return fmt.Errorf("ssh: no one host key from %v match %s", f.keys, ssh.FingerprintSHA256(key))
+}
+
+// HostKeyCallback returns a function for use in
+// ClientConfig.HostKeyCallback to accept specific host keys.
+func HostKeyCallback(keys ...ssh.PublicKey) ssh.HostKeyCallback {
+	hk := &hostKeys{keys}
+	return hk.check
 }

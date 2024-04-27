@@ -6,7 +6,7 @@
 Package sshlib is a library to easily connect with ssh by go.
 You can perform multiple proxy, x11 forwarding, PKCS11 authentication, etc...
 
-Example simple ssh shell
+# Example simple ssh shell
 
 It is example code. simple connect ssh shell. You can also do tab completion, send sigint signal(Ctrl+C).
 
@@ -16,7 +16,7 @@ It is example code. simple connect ssh shell. You can also do tab completion, se
 		"fmt"
 		"os"
 
-		sshlib "github.com/blacknon/go-sshlib"
+		sshlib "github.com/abakum/go-sshlib"
 		"golang.org/x/crypto/ssh"
 	)
 
@@ -43,7 +43,7 @@ It is example code. simple connect ssh shell. You can also do tab completion, se
 		// Create ssh.AuthMethod
 		authMethod := sshlib.CreateAuthMethodPassword(password)
 
-		// If you use ssh-agent forwarding, uncomment it.
+		// If you use ssh-agent, uncomment it.
 		// con.ConnectSshAgent()
 
 		// Connect ssh server
@@ -60,9 +60,7 @@ It is example code. simple connect ssh shell. You can also do tab completion, se
 		con.Shell()
 	}
 
-
-
-Example simple ssh proxy shell
+# Example simple ssh proxy shell
 
 Multple proxy by ssh connection is also available. Please refer to the sample code for usage with http and socks5 proxy.
 
@@ -72,7 +70,7 @@ Multple proxy by ssh connection is also available. Please refer to the sample co
 		"fmt"
 		"os"
 
-		sshlib "github.com/blacknon/go-sshlib"
+		sshlib "github.com/abakum/go-sshlib"
 		"golang.org/x/crypto/ssh"
 	)
 
@@ -135,7 +133,6 @@ Multple proxy by ssh connection is also available. Please refer to the sample co
 		// Start ssh shell
 		targetCon.Shell()
 	}
-
 
 This library was created for my ssh client (https://github.com/blacknon/lssh)
 */

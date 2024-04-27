@@ -59,7 +59,7 @@ func (c *Connect) Command(command string) (err error) {
 	return
 }
 
-//
+// RequestTty, ForwardSshAgent, X11Forward
 func (c *Connect) setOption(session *ssh.Session) (err error) {
 	// Request tty
 	if c.TTY {
@@ -69,11 +69,6 @@ func (c *Connect) setOption(session *ssh.Session) (err error) {
 		}
 	}
 
-	// ssh agent forwarding
-	if c.ForwardAgent {
-		c.ForwardSshAgent(session)
-	}
-
 	// x11 forwarding
 	if c.ForwardX11 {
 		err = c.X11Forward(session)
@@ -81,6 +76,11 @@ func (c *Connect) setOption(session *ssh.Session) (err error) {
 			log.Println(err)
 		}
 		err = nil
+	}
+
+	// ssh agent forwarding
+	if c.ForwardAgent {
+		c.ForwardSshAgent(session)
 	}
 
 	return

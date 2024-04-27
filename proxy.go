@@ -16,7 +16,6 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-//
 type Proxy struct {
 	// Type set proxy type.
 	// Can specify `http`, `https`, `socks`, `socks5`, `command`.
@@ -49,7 +48,6 @@ type Proxy struct {
 }
 
 // CreateProxyDialer retrun proxy.Dialer.
-//
 func (p *Proxy) CreateProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	switch p.Type {
 	case "http", "https":
@@ -64,7 +62,6 @@ func (p *Proxy) CreateProxyDialer() (proxyDialer proxy.Dialer, err error) {
 }
 
 // CreateHttpProxy return proxy.Dialer as http proxy.
-//
 func (p *Proxy) CreateHttpProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	// Regist dialer
 	proxy.RegisterDialerType("http", newHttpProxy)
@@ -92,13 +89,14 @@ func (p *Proxy) CreateHttpProxyDialer() (proxyDialer proxy.Dialer, err error) {
 }
 
 // CreateSocks5Proxy return proxy.Dialer as Socks5 proxy.
-//
 func (p *Proxy) CreateSocks5ProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	var proxyAuth *proxy.Auth
 
 	if p.User != "" && p.Password != "" {
-		proxyAuth.User = p.User
-		proxyAuth.Password = p.Password
+		proxyAuth = &proxy.Auth{
+			User:     p.User,
+			Password: p.Password,
+		}
 	}
 
 	var forwarder proxy.Dialer
@@ -112,7 +110,6 @@ func (p *Proxy) CreateSocks5ProxyDialer() (proxyDialer proxy.Dialer, err error) 
 
 // CreateProxyCommandProxyDialer as ProxyCommand.
 // When passing ProxyCommand, replace %h, %p and %r etc...
-//
 func (p *Proxy) CreateProxyCommandProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	np := new(NetPipe)
 	np.Command = p.Command
@@ -121,15 +118,13 @@ func (p *Proxy) CreateProxyCommandProxyDialer() (proxyDialer proxy.Dialer, err e
 	return
 }
 
-//
 type NetPipe struct {
 	Command string
 }
 
-//
 func (n *NetPipe) Dial(network, addr string) (con net.Conn, err error) {
-	network = ""
-	addr = ""
+	// network = ""
+	// addr = ""
 
 	// Create net.Pipe(), and set proxyCommand
 	con, srv := net.Pipe()
@@ -147,7 +142,6 @@ func (n *NetPipe) Dial(network, addr string) (con net.Conn, err error) {
 	return
 }
 
-//
 type httpProxy struct {
 	host     string
 	haveAuth bool
@@ -157,7 +151,6 @@ type httpProxy struct {
 }
 
 // Dial return net.Conn via http proxy.
-//
 func (s *httpProxy) Dial(network, addr string) (net.Conn, error) {
 	c, err := s.forward.Dial("tcp", s.host)
 	if err != nil {
