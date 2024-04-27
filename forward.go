@@ -320,9 +320,37 @@ func (c *Connect) HTTPDynamicForward(address, port string) (err error) {
 	}
 
 	// set logger
+	httpProxy.Verbose = true
 	httpProxy.Logger = c.getDynamicForwardLogger()
 
 	// listen
 	err = http.ListenAndServe(net.JoinHostPort(address, port), httpProxy)
+	return
+}
+
+// HTTPReverseDynamicForward reverse forwarding http data.
+// Like Reverse Dynamic forward (`ssh -R <port>`). but use http proxy.
+func (c *Connect) HTTPReverseDynamicForward(address, port string) (err error) {
+	// create http proxy. use goproxy
+	httpProxy := goproxy.NewProxyHttpServer()
+
+	// set dial
+	httpProxy.ConnectDial = func(n, addr string) (net.Conn, error) {
+		fmt.Println(n, addr)
+		return net.Dial(n, addr)
+	}
+
+	// create listner
+	listner, err := c.Client.Listen("tcp", net.JoinHostPort(address, port))
+	if err != nil {
+		return
+	}
+
+	// set logger
+	httpProxy.Verbose = true
+	httpProxy.Logger = c.getDynamicForwardLogger()
+
+	// listen
+	err = http.Serve(listner, httpProxy)
 	return
 }
