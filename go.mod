@@ -1,5 +1,8 @@
 module github.com/abakum/go-sshlib
 
+// replace github.com/abakum/term => ../term
+
+
 require (
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
 	// TODO: マージされたらベースのリポジトリに変更する
@@ -9,9 +12,6 @@ require (
 	golang.org/x/crypto v0.19.0
 	golang.org/x/net v0.10.0
 	golang.org/x/sys v0.17.0
-)
-
-require (
 	github.com/Microsoft/go-winio v0.5.2
 	github.com/abakum/go-ansiterm v0.0.0-20240209124652-4fc46d492442
 	github.com/abakum/pageant v0.0.0-20231124135236-c9f79a77a513

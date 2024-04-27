@@ -14,7 +14,7 @@ import (
 func NewConn() (sock net.Conn, err error) {
 	// Get env "SSH_AUTH_SOCK" and connect.
 	IdentityAgent := os.Getenv("SSH_AUTH_SOCK")
-	sock, err := net.Dial("unix", IdentityAgent)
+	sock, err = net.Dial("unix", IdentityAgent)
 
 	return
 }
