@@ -2,7 +2,7 @@
 // Use of this source code is governed by an MIT license
 // that can be found in the LICENSE file.
 
-// Shell connection and dynamic forwarding Example file.
+// Shell connection and http dynamic forwarding Example file.
 // Change the value of the variable and compile to make sure that you can actually connect.
 //
 // This file uses password authentication. Please replace as appropriate.
