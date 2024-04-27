@@ -14,7 +14,10 @@ require (
 	golang.org/x/sys v0.19.0
 )
 
-require golang.org/x/term v0.19.0
+require (
+	github.com/elazarl/goproxy v0.0.0-20231117061959-7cc037d33fb5
+	golang.org/x/term v0.19.0
+)
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
