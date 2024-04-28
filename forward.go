@@ -158,8 +158,8 @@ func getX11DisplayNumber(display string) int {
 //
 // example) "127.0.0.1:22", "abc.com:9977"
 func (c *Connect) TCPLocalForward(localAddr, remoteAddr string) (err error) {
-	// create listner
-	listner, err := net.Listen("tcp", localAddr)
+	// create listener
+	listener, err := net.Listen("tcp", localAddr)
 	if err != nil {
 		return
 	}
@@ -168,7 +168,7 @@ func (c *Connect) TCPLocalForward(localAddr, remoteAddr string) (err error) {
 	go func() {
 		for {
 			// local (type net.Conn)
-			local, err := listner.Accept()
+			local, err := listener.Accept()
 			if err != nil {
 				return
 			}
@@ -189,8 +189,8 @@ func (c *Connect) TCPLocalForward(localAddr, remoteAddr string) (err error) {
 //
 // example) "127.0.0.1:22", "abc.com:9977"
 func (c *Connect) TCPRemoteForward(localAddr, remoteAddr string) (err error) {
-	// create listner
-	listner, err := c.Client.Listen("tcp", remoteAddr)
+	// create listener
+	listener, err := c.Client.Listen("tcp", remoteAddr)
 	if err != nil {
 		return
 	}
@@ -205,7 +205,7 @@ func (c *Connect) TCPRemoteForward(localAddr, remoteAddr string) (err error) {
 			}
 
 			// remote (type net.Conn)
-			remote, err := listner.Accept()
+			remote, err := listener.Accept()
 			if err != nil {
 				return
 			}
@@ -291,8 +291,8 @@ func (c *Connect) TCPReverseDynamicForward(address, port string) (err error) {
 		Logger:   c.getDynamicForwardLogger(),
 	}
 
-	// create listner
-	listner, err := c.Client.Listen("tcp", net.JoinHostPort(address, port))
+	// create listener
+	listener, err := c.Client.Listen("tcp", net.JoinHostPort(address, port))
 	if err != nil {
 		return
 	}
@@ -304,7 +304,7 @@ func (c *Connect) TCPReverseDynamicForward(address, port string) (err error) {
 	}
 
 	// Listen
-	err = s.Serve(listner)
+	err = s.Serve(listener)
 	return
 }
 
@@ -330,18 +330,22 @@ func (c *Connect) HTTPDynamicForward(address, port string) (err error) {
 
 // HTTPReverseDynamicForward reverse forwarding http data.
 // Like Reverse Dynamic forward (`ssh -R <port>`). but use http proxy.
+//
+// NOTE:
+// httpでは動作するが、なぜかhttpsだと動かない。CONNECTメソッド以降の処理で止まってしまう。
+// どうにも解決策がわからずIssueで聞いてしまったが、礼儀として違ったかもしれない？
+// https://github.com/elazarl/goproxy/issues/534
 func (c *Connect) HTTPReverseDynamicForward(address, port string) (err error) {
 	// create http proxy. use goproxy
 	httpProxy := goproxy.NewProxyHttpServer()
 
 	// set dial
 	httpProxy.ConnectDial = func(n, addr string) (net.Conn, error) {
-		fmt.Println(n, addr)
 		return net.Dial(n, addr)
 	}
 
-	// create listner
-	listner, err := c.Client.Listen("tcp", net.JoinHostPort(address, port))
+	// create listener
+	listener, err := c.Client.Listen("tcp", net.JoinHostPort(address, port))
 	if err != nil {
 		return
 	}
@@ -351,6 +355,6 @@ func (c *Connect) HTTPReverseDynamicForward(address, port string) (err error) {
 	httpProxy.Logger = c.getDynamicForwardLogger()
 
 	// listen
-	err = http.Serve(listner, httpProxy)
+	err = http.Serve(listener, httpProxy)
 	return
 }
