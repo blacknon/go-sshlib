@@ -3,6 +3,8 @@
 
 package sshlib
 
+import "github.com/abakum/go-ansiterm"
+
 func (c *Connect) CommandAnsi(command string, _, _ bool) (err error) {
 	return c.Command(command)
 }
@@ -30,5 +32,11 @@ func (c *Connect) Output(cmd string, pty bool) (bs []byte, err error) {
 		return
 	}
 	bs, err = c.Session.Output(cmd)
+	if err != nil {
+		return
+	}
+	if pty {
+		bs, err = ansiterm.Strip(bs, ansiterm.WithFe(true))
+	}
 	return
 }
