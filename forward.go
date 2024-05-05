@@ -19,8 +19,8 @@ import (
 
 	"github.com/armon/go-socks5"
 	xauth "github.com/blacknon/go-x11auth"
-	"github.com/elazarl/goproxy"
 	"golang.org/x/crypto/ssh"
+	"gopkg.in/elazarl/goproxy.v1"
 )
 
 // x11 request data struct
@@ -334,6 +334,7 @@ func (c *Connect) HTTPDynamicForward(address, port string) (err error) {
 // NOTE:
 // httpでは動作するが、なぜかhttpsだと動かない。CONNECTメソッド以降の処理で止まってしまう。
 // どうにも解決策がわからずIssueで聞いてしまったが、礼儀として違ったかもしれない？
+// とりあえず待ちにする
 // https://github.com/elazarl/goproxy/issues/534
 func (c *Connect) HTTPReverseDynamicForward(address, port string) (err error) {
 	// create http proxy. use goproxy

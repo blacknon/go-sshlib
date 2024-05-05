@@ -15,13 +15,15 @@ require (
 )
 
 require (
-	github.com/elazarl/goproxy v0.0.0-20231117061959-7cc037d33fb5
 	golang.org/x/term v0.19.0
+	gopkg.in/elazarl/goproxy.v1 v1.0.0-20180725130230-947c36da3153
 )
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/dchest/bcrypt_pbkdf v0.0.0-20150205184540-83f37f9c154a // indirect
+	github.com/elazarl/goproxy v0.0.0-20231117061959-7cc037d33fb5 // indirect
+	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/stretchr/testify v1.7.1 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
