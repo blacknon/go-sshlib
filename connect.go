@@ -89,6 +89,8 @@ type Connect struct {
 	// The remote address is the RemoteAddr of the net.Conn underlying the SSH connection.
 	HostKeyCallback ssh.HostKeyCallback
 
+	HostKeyAlgorithms []string
+
 	// shell terminal log flag
 	logging bool
 
@@ -129,6 +131,9 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 			config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 		} else {
 			config.HostKeyCallback = c.HostKeyCallback
+			if c.HostKeyAlgorithms != nil {
+				config.HostKeyAlgorithms = c.HostKeyAlgorithms
+			}
 		}
 	}
 
@@ -243,7 +248,7 @@ func RequestTty(session *ssh.Session) (err error) {
 	// Get env `TERM`
 	xterm := os.Getenv("TERM")
 	if len(xterm) == 0 {
-		xterm = "xterm"
+		xterm = "xterm-256color"
 	}
 
 	if err = session.RequestPty(xterm, hight, width, modes); err != nil {

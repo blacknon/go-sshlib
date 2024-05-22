@@ -26,10 +26,10 @@ func (c *Connect) ShellAnsi(session *ssh.Session, emulate bool) (err error) {
 	// Set Stdin, Stdout, Stderr...
 	std := termm.NewIOE()
 	defer std.Close()
-	session.Stdin = std.ReadCloser()
+	c.Session.Stdin = std.ReadCloser()
 
-	session.Stdout = os.Stdout
-	session.Stdout = os.Stderr
+	c.Session.Stdout = os.Stdout
+	c.Session.Stdout = os.Stderr
 	if emulate {
 		wo, do, err := termm.StdOE(os.Stdout)
 		if err == nil {
