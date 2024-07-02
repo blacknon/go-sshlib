@@ -11,11 +11,11 @@ import (
 	"time"
 )
 
-// customDialer returns a Dial function that dials a specific address for all requests
-func customDialer(targetAddr string) func(network, addr string) (net.Conn, error) {
-	return func(network, addr string) (net.Conn, error) {
-		return net.DialTimeout(network, targetAddr, 10*time.Second)
-	}
+// httpTransfer copies data between src and dst
+func httpTransfer(dst io.WriteCloser, src io.ReadCloser) {
+	defer dst.Close()
+	defer src.Close()
+	io.Copy(dst, src)
 }
 
 // handleHTTPSProxy handles CONNECT method for HTTPS requests
@@ -41,20 +41,13 @@ func handleHTTPSProxy(dial func(network, addr string) (net.Conn, error), w http.
 	clientConn.SetDeadline(time.Time{})
 	destConn.SetDeadline(time.Time{})
 
-	go transfer(destConn, clientConn)
-	go transfer(clientConn, destConn)
+	go httpTransfer(destConn, clientConn)
+	go httpTransfer(clientConn, destConn)
 
 	// Ensure any buffered data from the client is written to the destination
 	if buf.Reader.Buffered() > 0 {
 		io.Copy(destConn, buf)
 	}
-}
-
-// transfer copies data between src and dst
-func transfer(dst io.WriteCloser, src io.ReadCloser) {
-	defer dst.Close()
-	defer src.Close()
-	io.Copy(dst, src)
 }
 
 // handleHTTPProxy handles HTTP requests

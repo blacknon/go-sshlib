@@ -310,11 +310,8 @@ func (c *Connect) TCPReverseDynamicForward(address, port string) (err error) {
 // HTTPDynamicForward forwarding http data.
 // Like Dynamic forward (`ssh -D <port>`). but use http proxy.
 func (c *Connect) HTTPDynamicForward(address, port string) (err error) {
-	// create http proxy. use goproxy
-	// httpProxy := goproxy.NewProxyHttpServer()
-
-	// set dial
-	// httpProxy.Tr = &http.Transport{Dial: c.Client.Dial}
+	// create dial
+	dial := c.Client.Dial
 
 	// create listener
 	listener, err := net.Listen("tcp", net.JoinHostPort(address, port))
@@ -323,10 +320,8 @@ func (c *Connect) HTTPDynamicForward(address, port string) (err error) {
 	}
 	defer listener.Close()
 
-	dial := c.Client.Dial
-
+	// create proxy server.
 	server := &http.Server{
-		// Addr: ":8080",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodConnect {
 				handleHTTPSProxy(dial, w, r)
@@ -334,36 +329,19 @@ func (c *Connect) HTTPDynamicForward(address, port string) (err error) {
 				handleHTTPProxy(dial, w, r)
 			}
 		}),
-		// TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler)), // Disable HTTP/2
+		ErrorLog: c.getDynamicForwardLogger(),
 	}
 
-	// set logger
-	// httpProxy.Verbose = true
-	// httpProxy.Logger = c.getDynamicForwardLogger()
-
 	// listen
-	// err = http.Serve(listener, httpProxy)
 	err = server.Serve(listener)
 	return
 }
 
 // HTTPReverseDynamicForward reverse forwarding http data.
 // Like Reverse Dynamic forward (`ssh -R <port>`). but use http proxy.
-//
-// NOTE:
-// httpでは動作するが、なぜかhttpsだと動かない。CONNECTメソッド以降の処理で止まってしまう。
-// どうにも解決策がわからずIssueで聞いてしまったが、礼儀として違ったかもしれない？
-// とりあえず待ちにする
-// https://github.com/elazarl/goproxy/issues/534
-//
-// NOTE:
-// buffer sizeのような気がしてきた(わからんけど…)
 func (c *Connect) HTTPReverseDynamicForward(address, port string) (err error) {
-	// create http proxy. use goproxy
-	// httpProxy := goproxy.NewProxyHttpServer()
-
-	// set dial
-	// httpProxy.Tr = &http.Transport{Dial: net.Dial}
+	// create dial
+	dial := net.Dial
 
 	// create listener
 	listener, err := c.Client.Listen("tcp", net.JoinHostPort(address, port))
@@ -372,12 +350,8 @@ func (c *Connect) HTTPReverseDynamicForward(address, port string) (err error) {
 	}
 	defer listener.Close()
 
-	dial := net.Dial
-	// set logger
-	// httpProxy.Verbose = true
-	// httpProxy.Logger = c.getDynamicForwardLogger()
+	// create proxy server.
 	server := &http.Server{
-		// Addr: ":8080",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodConnect {
 				handleHTTPSProxy(dial, w, r)
@@ -385,11 +359,10 @@ func (c *Connect) HTTPReverseDynamicForward(address, port string) (err error) {
 				handleHTTPProxy(dial, w, r)
 			}
 		}),
-		// TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler)), // Disable HTTP/2
+		ErrorLog: c.getDynamicForwardLogger(),
 	}
 
 	// listen
-	// err = http.Serve(listener, httpProxy)
 	err = server.Serve(listener)
 	return
 }
