@@ -12,10 +12,6 @@ require (
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/net v0.0.0-20220526153639-5463443f8c37
 	golang.org/x/sys v0.19.0
-)
-
-require (
-	github.com/elazarl/goproxy v0.0.0-20231117061959-7cc037d33fb5
 	golang.org/x/term v0.19.0
 )
 
@@ -28,6 +24,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-go 1.22.2
+go 1.22.4
 
 replace github.com/ThalesIgnite/crypto11 v1.2.5 => github.com/blacknon/crypto11 v1.2.6
