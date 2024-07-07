@@ -26,5 +26,3 @@ require (
 )
 
 go 1.22.4
-
-// replace github.com/ThalesIgnite/crypto11 v1.2.6 => github.com/blacknon/crypto11 v1.2.6
