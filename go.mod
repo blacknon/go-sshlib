@@ -2,9 +2,10 @@ module github.com/blacknon/go-sshlib
 
 require (
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
-	// TODO: マージされたらベースのリポジトリに変更する
-	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
+	// TODO: マージされたらベースのリポジトリに変更する
+	// github.com/ThalesIgnite/crypto11 v1.2.6
+	github.com/blacknon/crypto11 v1.2.7
 	github.com/blacknon/go-x11auth v0.1.0
 	github.com/lunixbochs/vtclean v1.0.0
 	github.com/miekg/pkcs11 v1.1.1
@@ -26,4 +27,4 @@ require (
 
 go 1.22.4
 
-replace github.com/ThalesIgnite/crypto11 v1.2.5 => github.com/blacknon/crypto11 v1.2.6
+// replace github.com/ThalesIgnite/crypto11 v1.2.6 => github.com/blacknon/crypto11 v1.2.6
