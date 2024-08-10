@@ -17,6 +17,33 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+type ContextDialer struct {
+	dialer proxy.Dialer
+}
+
+func (c *ContextDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	connChan := make(chan net.Conn, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		conn, err := c.dialer.Dial(network, addr)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		connChan <- conn
+	}()
+
+	select {
+	case conn := <-connChan:
+		return conn, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
 type Proxy struct {
 	// Type set proxy type.
 	// Can specify `http`, `https`, `socks`, `socks5`, `command`.
@@ -49,7 +76,8 @@ type Proxy struct {
 }
 
 // CreateProxyDialer retrun proxy.Dialer.
-func (p *Proxy) CreateProxyDialer() (proxyDialer proxy.Dialer, err error) {
+func (p *Proxy) CreateProxyDialer() (proxyContextDialer proxy.ContextDialer, err error) {
+	var proxyDialer proxy.Dialer
 	switch p.Type {
 	case "http", "https":
 		proxyDialer, err = p.CreateHttpProxyDialer()
@@ -58,6 +86,8 @@ func (p *Proxy) CreateProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	case "command":
 		proxyDialer, err = p.CreateProxyCommandProxyDialer()
 	}
+
+	proxyContextDialer = &ContextDialer{dialer: proxyDialer}
 
 	return
 }
