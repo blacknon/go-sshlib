@@ -6,8 +6,8 @@ github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPd
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/blacknon/crypto11 v1.2.7 h1:LKrnCeXAk4jQmpJTeg/tVvNjqEgKHIE+tYSNXQj8Fco=
 github.com/blacknon/crypto11 v1.2.7/go.mod h1:Z24sFD9pMX3NdUFzX52ggcV7HurAYAGvxud73BrHudA=
-github.com/blacknon/go-nfs v0.0.3 h1:SK02Cc9HQ3k7nx7Wek+fJF9uTUeHQ7aF5ah6tIrzXJY=
-github.com/blacknon/go-nfs v0.0.3/go.mod h1:Ql2ebUpEFm/a1CAY884di2XZkdcddfHZ6ONrAlhFev0=
+github.com/blacknon/go-nfs-sshlib v0.0.3 h1:tq83kTZibrr99/GCn0pqkJhmBTDMupL/eMI3ZhSM0G4=
+github.com/blacknon/go-nfs-sshlib v0.0.3/go.mod h1:jaCmHgFoj8j08rGrBnhJ4nFO7nUWs4xFrUd2vEPwyx8=
 github.com/blacknon/go-x11auth v0.1.0 h1:SnljCPWcvglWeGAlKc1RAPMHnOfMpM9+GrTGEUQ1lqQ=
 github.com/blacknon/go-x11auth v0.1.0/go.mod h1:SKOCa19LluXHyB+OaLYobquzceE0SWxVW7e/qU5xGBM=
 github.com/creack/pty v1.1.11/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
