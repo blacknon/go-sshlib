@@ -6,6 +6,7 @@ package sshlib
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -140,6 +141,29 @@ func (n *NetPipe) Dial(network, addr string) (con net.Conn, err error) {
 	return
 }
 
+func (n *NetPipe) DialContext(ctx context.Context, network, addr string) (con net.Conn, err error) {
+	connChan := make(chan net.Conn, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		conn, err := n.Dial(network, addr)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		connChan <- conn
+	}()
+
+	select {
+	case conn := <-connChan:
+		return conn, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
 type httpProxy struct {
 	host     string
 	haveAuth bool
@@ -193,6 +217,29 @@ func (s *httpProxy) Dial(network, addr string) (net.Conn, error) {
 	}
 
 	return c, nil
+}
+
+func (s *httpProxy) DialContext(ctx context.Context, network, addr string) (con net.Conn, err error) {
+	connChan := make(chan net.Conn, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		conn, err := s.Dial(network, addr)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		connChan <- conn
+	}()
+
+	select {
+	case conn := <-connChan:
+		return conn, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 // newHttpProxy
