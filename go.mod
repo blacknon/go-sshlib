@@ -1,5 +1,7 @@
 module github.com/blacknon/go-sshlib
 
+// NOTE: go-nfsについては、オリジナルがアップデートされたらベースのリポジトリに変更する(2024/08/10)
+
 require (
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
@@ -17,7 +19,6 @@ require (
 )
 
 require (
-	github.com/go-git/go-billy v4.2.0+incompatible
 	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/pkg/sftp v1.13.6
 	github.com/willscott/go-nfs v0.0.2
@@ -34,10 +35,8 @@ require (
 	github.com/rasky/go-xdr v0.0.0-20170124162913-1a41d1a06c93 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
 	github.com/willscott/go-nfs-client v0.0.0-20240104095149-b44639837b00 // indirect
-	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect
 )
 
 go 1.22.4
 
-// NOTE: アップデートされたらベースのリポジトリに変更する(2024/08/09)
-replace github.com/willscott/go-nfs v0.0.2 => ../go-nfs
+replace github.com/willscott/go-nfs v0.0.2 => github.com/blacknon/go-nfs v0.0.3
