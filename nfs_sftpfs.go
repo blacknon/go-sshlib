@@ -47,11 +47,17 @@ type SFTPFS struct {
 
 // Create
 func (fs *SFTPFS) Create(filename string) (billy.File, error) {
+	_, err := fs.Stat(filename)
+	if err == nil {
+		return nil, os.ErrExist
+	}
+
 	dir := filepath.Dir(filename)
-	err := fs.MkdirAll(dir, os.ModeDir)
+	err = fs.MkdirAll(dir, os.ModeDir)
 	if err != nil {
 		return nil, err
 	}
+
 	f, err := fs.Client.Create(filename)
 	if err != nil {
 		return nil, err
