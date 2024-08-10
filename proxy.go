@@ -17,8 +17,17 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+type ProxyDialer interface {
+	Dial(network, addr string) (net.Conn, error)
+	DialContext(ctx context.Context, network, addr string) (net.Conn, error)
+}
+
 type ContextDialer struct {
 	dialer proxy.Dialer
+}
+
+func (c *ContextDialer) Dial(network, addr string) (net.Conn, error) {
+	return c.dialer.Dial(network, addr)
 }
 
 func (c *ContextDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -72,11 +81,11 @@ type Proxy struct {
 	Command string
 
 	// Forwarder set Dialer.
-	Forwarder proxy.Dialer
+	Forwarder ProxyDialer
 }
 
-// CreateProxyDialer retrun proxy.Dialer.
-func (p *Proxy) CreateProxyDialer() (proxyContextDialer proxy.ContextDialer, err error) {
+// CreateProxyDialer retrun ProxyDialer.
+func (p *Proxy) CreateProxyDialer() (proxyContextDialer ProxyDialer, err error) {
 	var proxyDialer proxy.Dialer
 	switch p.Type {
 	case "http", "https":
@@ -92,7 +101,7 @@ func (p *Proxy) CreateProxyDialer() (proxyContextDialer proxy.ContextDialer, err
 	return
 }
 
-// CreateHttpProxy return proxy.Dialer as http proxy.
+// CreateHttpProxy return ProxyDialer as http proxy.
 func (p *Proxy) CreateHttpProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	// Regist dialer
 	proxy.RegisterDialerType("http", newHttpProxy)
@@ -119,7 +128,7 @@ func (p *Proxy) CreateHttpProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	return
 }
 
-// CreateSocks5Proxy return proxy.Dialer as Socks5 proxy.
+// CreateSocks5Proxy return ProxyDialer as Socks5 proxy.
 func (p *Proxy) CreateSocks5ProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	var proxyAuth *proxy.Auth
 
@@ -128,7 +137,7 @@ func (p *Proxy) CreateSocks5ProxyDialer() (proxyDialer proxy.Dialer, err error) 
 		proxyAuth.Password = p.Password
 	}
 
-	var forwarder proxy.Dialer
+	var forwarder ProxyDialer
 	forwarder = proxy.Direct
 	if p.Forwarder != nil {
 		forwarder = p.Forwarder
