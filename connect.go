@@ -192,7 +192,7 @@ func (c *Connect) SendKeepAlive(session *ssh.Session) {
 	for {
 		// Send keep alive packet
 		_, err := session.SendRequest("keepalive", true, nil)
-		// _, _, err := c.Client.SendRequest("keepalive", true, nil)
+
 		if err == nil {
 			i = 0
 		} else {
