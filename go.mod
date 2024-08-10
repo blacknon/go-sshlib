@@ -1,6 +1,7 @@
 module github.com/blacknon/go-sshlib
 
 // NOTE: go-nfsについては、オリジナルがアップデートされたらベースのリポジトリに変更する(2024/08/10)
+//       => debug commitが何故か0.0.2に含まれていないので…
 
 require (
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
@@ -19,9 +20,9 @@ require (
 )
 
 require (
+	github.com/blacknon/go-nfs-sshlib v0.0.3
 	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/pkg/sftp v1.13.6
-	github.com/willscott/go-nfs v0.0.2
 )
 
 require (
@@ -39,4 +40,4 @@ require (
 
 go 1.22.4
 
-replace github.com/willscott/go-nfs v0.0.2 => github.com/blacknon/go-nfs v0.0.3
+// replace github.com/willscott/go-nfs v0.0.2 => github.com/blacknon/go-nfs v0.0.3
