@@ -6,6 +6,7 @@ package sshlib
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,6 +16,54 @@ import (
 
 	"golang.org/x/net/proxy"
 )
+
+type ProxyDialer interface {
+	Dial(network, addr string) (net.Conn, error)
+	DialContext(ctx context.Context, network, addr string) (net.Conn, error)
+}
+
+type ContextDialer struct {
+	Dialer proxy.Dialer
+}
+
+func (c *ContextDialer) GetDialer() proxy.Dialer {
+	return c.Dialer
+}
+
+func (c *ContextDialer) Dial(network, addr string) (net.Conn, error) {
+	return c.Dialer.Dial(network, addr)
+}
+
+func (c *ContextDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	// Simply call the DialContext method if supported
+	if dialerCtx, ok := c.Dialer.(interface {
+		DialContext(context.Context, string, string) (net.Conn, error)
+	}); ok {
+		return dialerCtx.DialContext(ctx, network, addr)
+	}
+
+	// Fallback if DialContext is not supported
+	connChan := make(chan net.Conn, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		conn, err := c.Dialer.Dial(network, addr)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		connChan <- conn
+	}()
+
+	select {
+	case conn := <-connChan:
+		return conn, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
 
 type Proxy struct {
 	// Type set proxy type.
@@ -44,11 +93,12 @@ type Proxy struct {
 	Command string
 
 	// Forwarder set Dialer.
-	Forwarder proxy.Dialer
+	Forwarder ProxyDialer
 }
 
-// CreateProxyDialer retrun proxy.Dialer.
-func (p *Proxy) CreateProxyDialer() (proxyDialer proxy.Dialer, err error) {
+// CreateProxyDialer retrun ProxyDialer.
+func (p *Proxy) CreateProxyDialer() (proxyContextDialer ProxyDialer, err error) {
+	var proxyDialer proxy.Dialer
 	switch p.Type {
 	case "http", "https":
 		proxyDialer, err = p.CreateHttpProxyDialer()
@@ -58,10 +108,12 @@ func (p *Proxy) CreateProxyDialer() (proxyDialer proxy.Dialer, err error) {
 		proxyDialer, err = p.CreateProxyCommandProxyDialer()
 	}
 
+	proxyContextDialer = &ContextDialer{Dialer: proxyDialer}
+
 	return
 }
 
-// CreateHttpProxy return proxy.Dialer as http proxy.
+// CreateHttpProxy return ProxyDialer as http proxy.
 func (p *Proxy) CreateHttpProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	// Regist dialer
 	proxy.RegisterDialerType("http", newHttpProxy)
@@ -88,7 +140,7 @@ func (p *Proxy) CreateHttpProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	return
 }
 
-// CreateSocks5Proxy return proxy.Dialer as Socks5 proxy.
+// CreateSocks5Proxy return ProxyDialer as Socks5 proxy.
 func (p *Proxy) CreateSocks5ProxyDialer() (proxyDialer proxy.Dialer, err error) {
 	var proxyAuth *proxy.Auth
 
@@ -97,7 +149,7 @@ func (p *Proxy) CreateSocks5ProxyDialer() (proxyDialer proxy.Dialer, err error) 
 		proxyAuth.Password = p.Password
 	}
 
-	var forwarder proxy.Dialer
+	var forwarder ProxyDialer
 	forwarder = proxy.Direct
 	if p.Forwarder != nil {
 		forwarder = p.Forwarder
@@ -118,6 +170,8 @@ func (p *Proxy) CreateProxyCommandProxyDialer() (proxyDialer proxy.Dialer, err e
 
 type NetPipe struct {
 	Command string
+	ctx     context.Context
+	Cmd     *exec.Cmd
 }
 
 func (n *NetPipe) Dial(network, addr string) (con net.Conn, err error) {
@@ -127,17 +181,42 @@ func (n *NetPipe) Dial(network, addr string) (con net.Conn, err error) {
 	// Create net.Pipe(), and set proxyCommand
 	con, srv := net.Pipe()
 
-	cmd := exec.Command("sh", "-c", n.Command)
+	n.Cmd = exec.Command("sh", "-c", n.Command)
 
 	// setup FD
-	cmd.Stdin = srv
-	cmd.Stdout = srv
-	cmd.Stderr = os.Stderr
+	n.Cmd.Stdin = srv
+	n.Cmd.Stdout = srv
+	n.Cmd.Stderr = os.Stderr
 
-	// run proxyCommand
-	err = cmd.Start()
+	// Start the command
+	err = n.Cmd.Start()
 
 	return
+}
+
+func (n *NetPipe) DialContext(ctx context.Context, network, addr string) (con net.Conn, err error) {
+	connChan := make(chan net.Conn, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		conn, err := n.Dial(network, addr)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		connChan <- conn
+	}()
+
+	select {
+	case conn := <-connChan:
+		return conn, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		n.Cmd.Process.Kill()
+		return nil, ctx.Err()
+	}
 }
 
 type httpProxy struct {
