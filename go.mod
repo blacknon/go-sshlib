@@ -39,5 +39,3 @@ require (
 )
 
 go 1.22.4
-
-// replace github.com/willscott/go-nfs v0.0.2 => github.com/blacknon/go-nfs v0.0.3

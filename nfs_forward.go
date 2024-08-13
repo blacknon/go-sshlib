@@ -37,26 +37,6 @@ func (c *Connect) NFSForward(address, port, basepoint string) (err error) {
 	return
 }
 
-func (c *Connect) NFSReverseSocket(socket, sharepoint string) (err error) {
-	// create listener
-	listener, err := c.Client.Listen("unix", socket)
-	if err != nil {
-		return
-	}
-	defer listener.Close()
-
-	bfs := osfs.New(sharepoint)
-	bfsPlusChange := NewChangeOSFS(bfs)
-
-	handler := nfshelper.NewNullAuthHandler(bfsPlusChange)
-	cacheHelper := nfshelper.NewCachingHandler(handler, 2048)
-
-	// listen
-	err = nfs.Serve(listener, cacheHelper)
-
-	return
-}
-
 // NFSReverseForward is Start NFS Server and forward port to remote server.
 // This port is forawrd GO-NFS Server.
 func (c *Connect) NFSReverseForward(address, port, sharepoint string) (err error) {
