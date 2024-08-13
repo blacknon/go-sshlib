@@ -8,10 +8,10 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 
 	"golang.org/x/net/proxy"
@@ -186,7 +186,7 @@ func (n *NetPipe) Dial(network, addr string) (con net.Conn, err error) {
 	// setup FD
 	n.Cmd.Stdin = srv
 	n.Cmd.Stdout = srv
-	n.Cmd.Stderr = os.Stderr
+	n.Cmd.Stderr = log.Writer()
 
 	// Start the command
 	err = n.Cmd.Start()
