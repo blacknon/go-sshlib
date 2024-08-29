@@ -51,6 +51,9 @@ type Connect struct {
 	// Set it before CraeteClient.
 	ForwardAgent bool
 
+	// Set the TTY to be used as the input and output for the Session/Cmd.
+	PtyRelayTty *os.File
+
 	// CheckKnownHosts if true, check knownhosts.
 	// Ignored if HostKeyCallback is set.
 	// Set it before CraeteClient.
