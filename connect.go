@@ -203,16 +203,13 @@ func (c *Connect) SendKeepAlive(session *ssh.Session) {
 			if _, err := session.SendRequest("keepalive@openssh.com", true, nil); err != nil {
 				if !errors.Is(err, io.EOF) {
 					log.Println("Failed to send keepalive packet:", err)
-					session.Close()
-					c.Client.Close()
-					break
 				} else {
-					// sleep
-					time.Sleep(time.Duration(interval) * time.Second)
-					continue
+					// err is io.EOF
+					log.Println("Session io.EOF. exit keepalive.")
 				}
+				break
 			} else {
-				// sleep
+				// err is nil.
 				time.Sleep(time.Duration(interval) * time.Second)
 				continue
 			}
@@ -223,7 +220,7 @@ func (c *Connect) SendKeepAlive(session *ssh.Session) {
 // CheckClientAlive check alive ssh.Client.
 func (c *Connect) CheckClientAlive() error {
 	_, _, err := c.Client.SendRequest("keepalive", true, nil)
-	if err == nil || err.Error() == "request failed" {
+	if err == nil {
 		return nil
 	}
 	return err
