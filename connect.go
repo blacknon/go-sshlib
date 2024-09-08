@@ -6,7 +6,6 @@ package sshlib
 
 import (
 	"context"
-	"errors"
 	"io"
 	"log"
 	"net"
@@ -194,24 +193,29 @@ func (c *Connect) SendKeepAlive(session *ssh.Session) {
 		interval = c.SendKeepAliveInterval
 	}
 
+	max := 3
+	if c.SendKeepAliveMax > 0 {
+		max = c.SendKeepAliveMax
+	}
+
 	t := time.NewTicker(time.Duration(c.ConnectTimeout) * time.Second)
 	defer t.Stop()
 
+	count := 0
 	for {
 		select {
 		case <-t.C:
 			if _, err := session.SendRequest("keepalive@openssh.com", true, nil); err != nil {
-				if !errors.Is(err, io.EOF) {
-					log.Println("Failed to send keepalive packet:", err)
-				} else {
-					// err is io.EOF
-					log.Println("Session io.EOF. exit keepalive.")
-				}
-				return
+				log.Println("Failed to send keepalive packet:", err)
+				count += 1
 			} else {
 				// err is nil.
 				time.Sleep(time.Duration(interval) * time.Second)
 			}
+		}
+
+		if count > max {
+			return
 		}
 	}
 }
