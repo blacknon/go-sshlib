@@ -36,19 +36,19 @@ type OverwriteInventory struct {
 // If is no problem, error returns Nil.
 //
 // 【参考】: https://github.com/tatsushid/minssh/blob/57eae8c5bcf5d94639891f3267f05251f05face4/pkg/minssh/minssh.go#L190-L237
-func (c *Connect) verifyAndAppendNew(hostname string, remote net.Addr, key ssh.PublicKey) (err error) {
+func (c *Connect) VerifyAndAppendNew(hostname string, remote net.Addr, key ssh.PublicKey) (err error) {
 	// set TextAskWriteKnownHosts default text
 	if len(c.TextAskWriteKnownHosts) == 0 {
 		c.TextAskWriteKnownHosts += "The authenticity of host '{{.Address}} ({{.RemoteAddr}})' can't be established.\n"
 		c.TextAskWriteKnownHosts += "RSA key fingerprint is {{.Fingerprint}}\n"
-		c.TextAskWriteKnownHosts += "Are you sure you want to continue connecting (yes/no)?"
+		c.TextAskWriteKnownHosts += "Are you sure you want to continue connecting (yes/no)? "
 	}
 
 	// set TextAskOverwriteKnownHosts default text
 	if len(c.TextAskOverwriteKnownHosts) == 0 {
 		c.TextAskOverwriteKnownHosts += "The authenticity of host '{{.Address}} ({{.RemoteAddr}})' can't be established.\n"
 		c.TextAskOverwriteKnownHosts += "Old key: {{.OldKeyText}}\n"
-		c.TextAskOverwriteKnownHosts += "Are you sure you want to overwrite {{.Fingerprint}}, continue connecting (yes/no)?"
+		c.TextAskOverwriteKnownHosts += "Are you sure you want to overwrite {{.Fingerprint}}, continue connecting (yes/no)? "
 	}
 
 	// check count KnownHostsFiles
