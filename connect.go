@@ -139,7 +139,7 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 				// append default files
 				c.KnownHostsFiles = append(c.KnownHostsFiles, "~/.ssh/known_hosts")
 			}
-			config.HostKeyCallback = c.verifyAndAppendNew
+			config.HostKeyCallback = c.VerifyAndAppendNew
 		} else {
 			config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 		}
