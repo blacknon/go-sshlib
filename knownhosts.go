@@ -211,7 +211,7 @@ func askOverwriteKnownHostKey(text string, address string, remote net.Addr, key 
 		} else if answer == "no" {
 			return false, nil
 		}
-		fmt.Print("Please type 'yes' or 'no': ")
+		fmt.Print("Please type 'yes|y' or 'no|n': ")
 	}
 }
 
