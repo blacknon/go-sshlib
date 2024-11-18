@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"text/template"
@@ -41,14 +42,14 @@ func (c *Connect) VerifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 	if len(c.TextAskWriteKnownHosts) == 0 {
 		c.TextAskWriteKnownHosts += "The authenticity of host '{{.Address}} ({{.RemoteAddr}})' can't be established.\n"
 		c.TextAskWriteKnownHosts += "RSA key fingerprint is {{.Fingerprint}}\n"
-		c.TextAskWriteKnownHosts += "Are you sure you want to continue connecting (yes/no)? "
+		c.TextAskWriteKnownHosts += "Are you sure you want to continue connecting ((yes|y)/(no|n))? "
 	}
 
 	// set TextAskOverwriteKnownHosts default text
 	if len(c.TextAskOverwriteKnownHosts) == 0 {
 		c.TextAskOverwriteKnownHosts += "The authenticity of host '{{.Address}} ({{.RemoteAddr}})' can't be established.\n"
 		c.TextAskOverwriteKnownHosts += "Old key: {{.OldKeyText}}\n"
-		c.TextAskOverwriteKnownHosts += "Are you sure you want to overwrite {{.Fingerprint}}, continue connecting (yes/no)? "
+		c.TextAskOverwriteKnownHosts += "Are you sure you want to overwrite {{.Fingerprint}}, continue connecting ((yes|y)/(no|n))? "
 	}
 
 	// check count KnownHostsFiles
@@ -156,9 +157,9 @@ func askAddingUnknownHostKey(text string, address string, remote net.Addr, key s
 			return false, fmt.Errorf("failed to read answer: %s", err)
 		}
 		answer = string(strings.ToLower(strings.TrimSpace(answer)))
-		if answer == "yes" {
+		if slices.Contains([]string{"yes", "y"}, answer) {
 			return true, nil
-		} else if answer == "no" {
+		} else if slices.Contains([]string{"no", "n"}, answer) {
 			return false, nil
 		}
 		fmt.Print("Please type 'yes' or 'no': ")
