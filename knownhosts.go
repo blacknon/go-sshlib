@@ -79,6 +79,12 @@ func (c *Connect) VerifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 	filepath := knownHostsFiles[0]
 	var line int
 
+	// check mutex
+	if c.StdoutMutex != nil {
+		c.StdoutMutex.Lock()
+		defer c.StdoutMutex.Unlock()
+	}
+
 	// check error
 	keyErr, ok := err.(*knownhosts.KeyError)
 	if !ok || len(keyErr.Want) > 0 {
@@ -107,7 +113,7 @@ func (c *Connect) VerifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 
 	err = writeKnownHostsKey(filepath, line, hostname, remote, key)
 
-	return nil
+	return err
 }
 
 // askAddingUnknownHostKey

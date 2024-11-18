@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -52,6 +53,9 @@ type Connect struct {
 
 	// Set the TTY to be used as the input and output for the Session/Cmd.
 	PtyRelayTty *os.File
+
+	// StdoutMutex is a mutex for use Stdout.
+	StdoutMutex *sync.Mutex
 
 	// CheckKnownHosts if true, check knownhosts.
 	// Ignored if HostKeyCallback is set.
