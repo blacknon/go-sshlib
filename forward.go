@@ -38,13 +38,19 @@ type x11Request struct {
 func (c *Connect) X11Forward(session *ssh.Session) (err error) {
 	// get xauthority path
 	xauthorityPath := os.Getenv("XAUTHORITY")
-	if len(xauthorityPath) == 0 {
-		home := os.Getenv("HOME")
-		if len(home) == 0 {
+	if xauthorityPath == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
 			err = errors.New("Xauthority not found: $XAUTHORITY, $HOME not set")
 			return err
 		}
-		xauthorityPath = home + "/.Xauthority"
+		xauthorityPath = filepath.Join(home, ".Xauthority")
+	}
+
+	if _, err := os.Stat(xauthorityPath); os.IsNotExist(err) {
+		if _, err := os.Create(xauthorityPath); err != nil {
+			return fmt.Errorf("can not create .Xauthority file: %v", err)
+		}
 	}
 
 	xa := xauth.XAuth{}
