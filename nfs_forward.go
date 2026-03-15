@@ -9,10 +9,10 @@ import (
 	"net"
 	"strings"
 
-	nfs "github.com/blacknon/go-nfs-sshlib"
-	nfshelper "github.com/blacknon/go-nfs-sshlib/helpers"
 	osfs "github.com/go-git/go-billy/v5/osfs"
 	"github.com/pkg/sftp"
+	nfs "github.com/willscott/go-nfs"
+	nfshelper "github.com/willscott/go-nfs/helpers"
 )
 
 func (c *Connect) NFSForward(address, port, basepoint string) (err error) {
