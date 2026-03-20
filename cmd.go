@@ -87,7 +87,7 @@ func (c *Connect) Command(command string) (err error) {
 }
 
 func (c *Connect) runControlCommand(req controlRequest) error {
-	resp, err := c.controlClient.request(req)
+	resp, err := c.requestControl(req)
 	if err != nil {
 		return err
 	}

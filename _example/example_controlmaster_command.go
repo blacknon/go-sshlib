@@ -10,9 +10,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
+	"time"
 
 	sshlib "github.com/blacknon/go-sshlib"
 	"golang.org/x/crypto/ssh"
@@ -32,10 +31,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	controlPath := filepath.Join(os.TempDir(), "go-sshlib-control.sock")
+	controlPath := filepath.Join(
+		os.TempDir(),
+		fmt.Sprintf("go-sshlib-%s-%s-%s.sock", user, host, port),
+	)
 	con := &sshlib.Connect{
-		ControlMaster: "auto",
-		ControlPath:   controlPath,
+		ControlMaster:      "auto",
+		ControlPath:        controlPath,
+		ControlPersist:     10 * time.Minute,
+		ControlPersistAuth: sshlib.CreateControlPersistPublicKeyAuth(key, ""),
 	}
 
 	if err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod}); err != nil {
@@ -44,35 +48,17 @@ func main() {
 	}
 	defer con.Close()
 
-	if con.Client != nil {
-		session, err := con.CreateSession()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		defer session.Close()
-
-		fmt.Println("mode: master")
-		if err := con.Shell(session); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		fmt.Println("master shell exited; keeping the shared connection alive until SIGINT/SIGTERM")
-		waitForTerminateSignal()
-		return
+	switch {
+	case con.SpawnedControlMaster():
+		fmt.Println("mode: slave (started new control master)")
+	case con.IsControlClient():
+		fmt.Println("mode: slave (connected to existing control master)")
+	default:
+		fmt.Println("mode: direct")
 	}
 
-	fmt.Println("mode: slave")
 	if err := con.Shell(nil); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-}
-
-func waitForTerminateSignal() {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(sigCh)
-	<-sigCh
 }

@@ -283,7 +283,7 @@ func (c *Connect) setupShell(session *ssh.Session) (err error) {
 }
 
 func (c *Connect) runControlSession(req controlRequest) error {
-	resp, err := c.controlClient.request(req)
+	resp, err := c.requestControl(req)
 	if err != nil {
 		return err
 	}
