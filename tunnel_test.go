@@ -2,8 +2,6 @@ package sshlib
 
 import (
 	"testing"
-
-	"golang.org/x/sys/unix"
 )
 
 func TestNormalizeTunnelUnit(t *testing.T) {
@@ -69,10 +67,10 @@ func TestUtunPacketFamily(t *testing.T) {
 		packet []byte
 		want   uint32
 	}{
-		{name: "empty", packet: nil, want: uint32(unix.AF_UNSPEC)},
-		{name: "ipv4", packet: []byte{0x45, 0x00}, want: uint32(unix.AF_INET)},
-		{name: "ipv6", packet: []byte{0x60, 0x00}, want: uint32(unix.AF_INET6)},
-		{name: "unknown", packet: []byte{0x10, 0x00}, want: uint32(unix.AF_UNSPEC)},
+		{name: "empty", packet: nil, want: utunFamilyUnspec},
+		{name: "ipv4", packet: []byte{0x45, 0x00}, want: utunFamilyIPv4},
+		{name: "ipv6", packet: []byte{0x60, 0x00}, want: utunFamilyIPv6},
+		{name: "unknown", packet: []byte{0x10, 0x00}, want: utunFamilyUnspec},
 	}
 
 	for _, tt := range tests {
