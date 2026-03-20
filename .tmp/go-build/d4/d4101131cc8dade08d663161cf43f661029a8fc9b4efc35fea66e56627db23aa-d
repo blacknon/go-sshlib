@@ -1,9 +1,0 @@
-=== RUN   TestGetDisplay
---- PASS: TestGetDisplay (0.00s)
-=== RUN   TestConnect_X11Forward
-    forward_test.go:53: requires a live SSH session and X11 environment
---- SKIP: TestConnect_X11Forward (0.00s)
-=== RUN   TestCreateClientWithDockerSSHD
---- PASS: TestCreateClientWithDockerSSHD (0.13s)
-PASS
-ok  	github.com/blacknon/go-sshlib	0.344s
