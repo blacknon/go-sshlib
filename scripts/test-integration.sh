@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+bash ./scripts/setup-go-env.sh
 docker info >/dev/null
 docker compose -f docker-compose.test.yml up -d --build sshd
 

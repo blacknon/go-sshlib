@@ -7,11 +7,11 @@ GOTMPDIR = "/tmp/go-sshlib-gotmp"
 
 [tasks.test]
 description = "Run the default Go test suite"
-run = "go test ./..."
+run = "bash ./scripts/setup-go-env.sh && go test ./..."
 
 [tasks.test-unit]
 description = "Run the unit test suite"
-run = "go test ./..."
+run = "bash ./scripts/setup-go-env.sh && go test ./..."
 
 [tasks.test-integration]
 description = "Run integration tests against the Dockerized SSH server"
