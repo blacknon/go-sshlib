@@ -16,10 +16,15 @@ import (
 	"sync"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/sys/unix"
 )
 
 const sshTunnelDeviceAny uint32 = 0x7fffffff
+
+const (
+	utunFamilyUnspec = 0
+	utunFamilyIPv4   = 2
+	utunFamilyIPv6   = 30
+)
 
 // TunnelDeviceAny requests that the next available tunnel interface be used.
 //
@@ -260,17 +265,17 @@ func (d *utunDevice) Write(p []byte) (int, error) {
 
 func utunPacketFamily(packet []byte) uint32 {
 	if len(packet) == 0 {
-		return uint32(unix.AF_UNSPEC)
+		return utunFamilyUnspec
 	}
 
 	version := packet[0] >> 4
 	switch version {
 	case 4:
-		return uint32(unix.AF_INET)
+		return utunFamilyIPv4
 	case 6:
-		return uint32(unix.AF_INET6)
+		return utunFamilyIPv6
 	default:
-		return uint32(unix.AF_UNSPEC)
+		return utunFamilyUnspec
 	}
 }
 
