@@ -1,17 +1,13 @@
 [tools]
 go = "1.25.1"
 
-[env]
-GOCACHE = "/tmp/go-sshlib-gocache"
-GOTMPDIR = "/tmp/go-sshlib-gotmp"
-
 [tasks.test]
 description = "Run the default Go test suite"
-run = "bash ./scripts/setup-go-env.sh && go test ./..."
+run = "bash -lc '. ./scripts/setup-go-env.sh; go test ./...'"
 
 [tasks.test-unit]
 description = "Run the unit test suite"
-run = "bash ./scripts/setup-go-env.sh && go test ./..."
+run = "bash -lc '. ./scripts/setup-go-env.sh; go test ./...'"
 
 [tasks.test-integration]
 description = "Run integration tests against the Dockerized SSH server"
