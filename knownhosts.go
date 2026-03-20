@@ -98,7 +98,7 @@ func (c *Connect) VerifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 				if err != nil {
 					msg += ": " + err.Error()
 				}
-				return fmt.Errorf(msg)
+				return fmt.Errorf("%s", msg)
 			}
 		}
 	} else {
@@ -107,7 +107,7 @@ func (c *Connect) VerifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 			if err != nil {
 				msg += ": " + err.Error()
 			}
-			return fmt.Errorf(msg)
+			return fmt.Errorf("%s", msg)
 		}
 		line = 0
 	}
