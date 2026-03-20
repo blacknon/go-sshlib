@@ -1,7 +1,6 @@
 package sshlib
 
 import (
-	"log"
 	"testing"
 
 	"golang.org/x/crypto/ssh"
@@ -26,7 +25,7 @@ func TestGetDisplay(t *testing.T) {
 	}
 }
 
-func ExampleConnect_TCPForward() {
+func ExampleConnect_TCPLocalForward() {
 	// host
 	host := "target.com"
 	port := "22"
@@ -50,17 +49,6 @@ func ExampleConnect_TCPForward() {
 	con.CreateClient(host, user, port, []ssh.AuthMethod{authMethod})
 }
 
-func TestConnect_X11Forward() {
-	// Create session
-	con := &Connect{}
-	session, err := con.CreateSession()
-	if err != nil {
-		return
-	}
-
-	// X11 forwarding
-	err = con.X11Forward(session)
-	if err != nil {
-		log.Fatal(err)
-	}
+func TestConnect_X11Forward(t *testing.T) {
+	t.Skip("requires a live SSH session and X11 environment")
 }
