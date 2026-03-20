@@ -6,8 +6,8 @@ name: "go-sshlib test job."
 
 on:
   push:
-    branches:
-      - !master
+    branches-ignore:
+      - master
   pull_request:
 
 jobs:
