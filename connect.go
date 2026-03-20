@@ -26,8 +26,12 @@ type Connect struct {
 	// Client *ssh.Client
 	Client *ssh.Client
 
-	controlClient *controlClient
-	controlMaster *controlMaster
+	controlClient  *controlClient
+	controlMaster  *controlMaster
+	controlHost    string
+	controlPort    string
+	controlUser    string
+	controlSpawned bool
 
 	// Session
 	Session *ssh.Session
@@ -118,8 +122,12 @@ type Connect struct {
 	ControlPath string
 
 	// ControlPersist keeps the local control socket alive while the owning process remains alive.
-	// The current implementation does not daemonize into a standalone background process.
+	// When greater than zero, sshlib will try to start a detached helper process.
 	ControlPersist time.Duration
+
+	// ControlPersistAuth contains re-playable authentication data for the detached helper.
+	// Required when ControlPersist > 0 and no master is already running.
+	ControlPersistAuth *ControlPersistAuth
 
 	// shell terminal log flag
 	logging bool
@@ -137,6 +145,10 @@ type Connect struct {
 // CreateClient set c.Client.
 func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMethod) (err error) {
 	c.controlClient = nil
+	c.controlSpawned = false
+	c.controlHost = host
+	c.controlPort = port
+	c.controlUser = user
 
 	mode := c.controlMode()
 	if mode == "" || mode == "no" {
@@ -159,6 +171,20 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 		}
 	}
 
+	if c.ControlPersist > 0 {
+		if err := c.startDetachedControlMaster(host, port, user); err != nil {
+			return err
+		}
+		c.controlSpawned = true
+
+		client, err := waitForControlClient(c.ControlPath, 5*time.Second)
+		if err != nil {
+			return err
+		}
+		c.controlClient = client
+		return nil
+	}
+
 	if err := c.createDirectClient(host, port, user, authMethods); err != nil {
 		return err
 	}
@@ -172,6 +198,14 @@ func (c *Connect) CreateClient(host, port, user string, authMethods []ssh.AuthMe
 	c.controlMaster = master
 
 	return nil
+}
+
+func (c *Connect) IsControlClient() bool {
+	return c.isControlClient()
+}
+
+func (c *Connect) SpawnedControlMaster() bool {
+	return c.controlSpawned
 }
 
 func (c *Connect) createDirectClient(host, port, user string, authMethods []ssh.AuthMethod) (err error) {

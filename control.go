@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"net"
 	"os"
@@ -62,6 +63,7 @@ type controlMaster struct {
 	sessionMu      sync.Mutex
 	sessionCond    *sync.Cond
 	activeSessions int
+	onActivity     func()
 }
 
 type controlClient struct {
@@ -120,6 +122,7 @@ func (m *controlMaster) acceptLoop() {
 
 func (m *controlMaster) handleControlConn(conn net.Conn) {
 	defer conn.Close()
+	m.touch()
 
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
@@ -146,6 +149,8 @@ func (m *controlMaster) handleControlConn(conn net.Conn) {
 }
 
 func (m *controlMaster) prepareSession(req controlRequest) (controlResponse, error) {
+	m.touch()
+
 	if req.Options.ForwardAgent {
 		return controlResponse{}, errors.New("sshlib: agent forwarding is not supported over ControlMaster yet")
 	}
@@ -153,8 +158,8 @@ func (m *controlMaster) prepareSession(req controlRequest) (controlResponse, err
 		return controlResponse{}, errors.New("sshlib: X11 forwarding is not supported over ControlMaster yet")
 	}
 
-	streamPath := fmt.Sprintf("%s.%d.stream", m.path, time.Now().UnixNano())
-	if err := cleanupStaleControlSocket(streamPath); err != nil {
+	streamPath, err := m.newStreamPath()
+	if err != nil {
 		return controlResponse{}, err
 	}
 
@@ -181,9 +186,33 @@ func (m *controlMaster) prepareSession(req controlRequest) (controlResponse, err
 	return controlResponse{OK: true, StreamPath: streamPath}, nil
 }
 
+func (m *controlMaster) newStreamPath() (string, error) {
+	dir := filepath.Dir(m.path)
+	base := shortSocketToken(m.path)
+
+	for i := 0; i < 32; i++ {
+		candidate := filepath.Join(dir, fmt.Sprintf("gs-%s-%x.sock", base, time.Now().UnixNano()+int64(i)))
+		if err := cleanupStaleControlSocket(candidate); err != nil {
+			return "", err
+		}
+		if _, err := os.Stat(candidate); os.IsNotExist(err) {
+			return candidate, nil
+		}
+	}
+
+	return "", errors.New("sshlib: failed to allocate a stream socket path")
+}
+
+func shortSocketToken(path string) string {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(path))
+	return fmt.Sprintf("%08x", h.Sum32())
+}
+
 func (m *controlMaster) serveStream(req controlRequest, conn net.Conn) {
 	m.acquireSession()
 	defer m.releaseSession()
+	m.touch()
 
 	writer := &lockedFrameWriter{w: conn}
 
@@ -229,11 +258,11 @@ func (m *controlMaster) serveStream(req controlRequest, conn net.Conn) {
 
 	go func() {
 		defer wg.Done()
-		pipeStreamToConn(stdout, writer, streamFrameStdout)
+		pipeStreamToConn(stdout, writer, streamFrameStdout, session)
 	}()
 	go func() {
 		defer wg.Done()
-		pipeStreamToConn(stderr, writer, streamFrameStderr)
+		pipeStreamToConn(stderr, writer, streamFrameStderr, session)
 	}()
 	go func() {
 		defer wg.Done()
@@ -255,6 +284,7 @@ func (m *controlMaster) serveStream(req controlRequest, conn net.Conn) {
 	err = session.Wait()
 	stdin.Close()
 	wg.Wait()
+	m.touch()
 
 	if err != nil {
 		_ = writer.WriteFrame(streamFrameError, []byte(err.Error()))
@@ -262,12 +292,19 @@ func (m *controlMaster) serveStream(req controlRequest, conn net.Conn) {
 	_ = writer.WriteFrame(streamFrameExit, encodeExitStatus(exitStatusFromError(err)))
 }
 
-func pipeStreamToConn(r io.Reader, writer *lockedFrameWriter, frameType byte) {
+func (m *controlMaster) touch() {
+	if m.onActivity != nil {
+		m.onActivity()
+	}
+}
+
+func pipeStreamToConn(r io.Reader, writer *lockedFrameWriter, frameType byte, session *ssh.Session) {
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := r.Read(buf)
 		if n > 0 {
 			if werr := writer.WriteFrame(frameType, buf[:n]); werr != nil {
+				_ = session.Close()
 				return
 			}
 		}
@@ -279,6 +316,7 @@ func pipeStreamToConn(r io.Reader, writer *lockedFrameWriter, frameType byte) {
 
 func readClientStream(conn net.Conn, stdin io.WriteCloser, session *ssh.Session) {
 	defer stdin.Close()
+	defer session.Close()
 
 	for {
 		frameType, payload, err := readStreamFrame(conn)
