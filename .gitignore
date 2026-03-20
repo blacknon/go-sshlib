@@ -21,4 +21,5 @@ _TEST
 _test
 
 .mise.toml
+.tmp
 test_termlog
