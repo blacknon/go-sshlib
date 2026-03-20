@@ -2,13 +2,12 @@
 # Use of this source code is governed by an MIT license
 # that can be found in the LICENSE file.
 
-name: "go-sshlib test and release job."
+name: "go-sshlib test job."
 
 on:
   push:
     branches:
-      - develop
-      - master
+      - !master
   pull_request:
 
 jobs:
