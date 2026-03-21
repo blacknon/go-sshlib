@@ -23,7 +23,7 @@ type controlPersistPayload struct {
 	CheckKnownHosts     bool
 	OverwriteKnownHosts bool
 	KnownHostsFiles     []string
-	Auth                *ControlPersistAuth
+	Auth                []controlPersistAuthMethodDefinition
 }
 
 type detachedControlMaster struct {
@@ -58,6 +58,11 @@ func (c *Connect) startDetachedControlMaster(host, port, user string) error {
 		return errors.New("sshlib: detached ControlPersist supports CheckKnownHosts or default insecure host key validation only")
 	}
 
+	resolvedAuths, err := c.ControlPersistAuth.resolved()
+	if err != nil {
+		return err
+	}
+
 	payload := controlPersistPayload{
 		Host:                host,
 		Port:                port,
@@ -67,7 +72,7 @@ func (c *Connect) startDetachedControlMaster(host, port, user string) error {
 		CheckKnownHosts:     c.CheckKnownHosts,
 		OverwriteKnownHosts: c.OverwriteKnownHosts,
 		KnownHostsFiles:     append([]string(nil), c.KnownHostsFiles...),
-		Auth:                c.ControlPersistAuth,
+		Auth:                resolvedAuths,
 	}
 
 	encoded, err := encodeControlPersistPayload(payload)
@@ -125,7 +130,7 @@ func runDetachedControlMaster(encoded string) error {
 		return err
 	}
 
-	authMethods, err := payload.Auth.createAuthMethods()
+	authMethods, err := createControlPersistAuthMethods(payload.Auth)
 	if err != nil {
 		return err
 	}

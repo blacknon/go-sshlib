@@ -55,23 +55,25 @@ func TestControlMasterCommandWithDockerSSHD(t *testing.T) {
 	controlPath := shortControlPath(t, "control.sock")
 
 	master := &Connect{
-		ControlMaster:      "auto",
-		ControlPath:        controlPath,
-		ControlPersist:     time.Minute,
-		ControlPersistAuth: CreateControlPersistPasswordAuth(password),
+		ControlMaster:  "auto",
+		ControlPath:    controlPath,
+		ControlPersist: time.Minute,
 	}
-	if err := master.CreateClient(host, port, user, []ssh.AuthMethod{CreateAuthMethodPassword(password)}); err != nil {
+	masterAuthMethod := CreateAuthMethodPassword(password)
+	master.ControlPersistAuth = &ControlPersistAuth{AuthMethods: []ssh.AuthMethod{masterAuthMethod}}
+	if err := master.CreateClient(host, port, user, []ssh.AuthMethod{masterAuthMethod}); err != nil {
 		t.Fatalf("master CreateClient() error = %v", err)
 	}
 	defer master.Close()
 
 	slave := &Connect{
-		ControlMaster:      "auto",
-		ControlPath:        controlPath,
-		ControlPersist:     time.Minute,
-		ControlPersistAuth: CreateControlPersistPasswordAuth(password),
+		ControlMaster:  "auto",
+		ControlPath:    controlPath,
+		ControlPersist: time.Minute,
 	}
-	if err := slave.CreateClient(host, port, user, []ssh.AuthMethod{CreateAuthMethodPassword(password)}); err != nil {
+	slaveAuthMethod := CreateAuthMethodPassword(password)
+	slave.ControlPersistAuth = &ControlPersistAuth{AuthMethods: []ssh.AuthMethod{slaveAuthMethod}}
+	if err := slave.CreateClient(host, port, user, []ssh.AuthMethod{slaveAuthMethod}); err != nil {
 		t.Fatalf("slave CreateClient() error = %v", err)
 	}
 
@@ -99,13 +101,14 @@ func TestControlPersistReplacesExpiredMaster(t *testing.T) {
 	persist := 1200 * time.Millisecond
 
 	runCommand := func(expected string) {
+		authMethod := CreateAuthMethodPassword(password)
 		con := &Connect{
 			ControlMaster:      "auto",
 			ControlPath:        controlPath,
 			ControlPersist:     persist,
-			ControlPersistAuth: CreateControlPersistPasswordAuth(password),
+			ControlPersistAuth: &ControlPersistAuth{AuthMethods: []ssh.AuthMethod{authMethod}},
 		}
-		if err := con.CreateClient(host, port, user, []ssh.AuthMethod{CreateAuthMethodPassword(password)}); err != nil {
+		if err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod}); err != nil {
 			t.Fatalf("CreateClient() error = %v", err)
 		}
 

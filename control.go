@@ -253,19 +253,18 @@ func (m *controlMaster) serveStream(req controlRequest, conn net.Conn) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(3)
+	var streamWG sync.WaitGroup
+	streamWG.Add(2)
 
 	go func() {
-		defer wg.Done()
+		defer streamWG.Done()
 		pipeStreamToConn(stdout, writer, streamFrameStdout, session)
 	}()
 	go func() {
-		defer wg.Done()
+		defer streamWG.Done()
 		pipeStreamToConn(stderr, writer, streamFrameStderr, session)
 	}()
 	go func() {
-		defer wg.Done()
 		readClientStream(conn, stdin, session)
 	}()
 
@@ -282,14 +281,28 @@ func (m *controlMaster) serveStream(req controlRequest, conn net.Conn) {
 	}
 
 	err = session.Wait()
-	stdin.Close()
-	wg.Wait()
+	_ = stdin.Close()
+	_ = session.Close()
+	streamWG.Wait()
 	m.touch()
 
-	if err != nil {
+	if err != nil && !shouldSuppressControlStreamError(req, err) {
 		_ = writer.WriteFrame(streamFrameError, []byte(err.Error()))
 	}
 	_ = writer.WriteFrame(streamFrameExit, encodeExitStatus(exitStatusFromError(err)))
+}
+
+func shouldSuppressControlStreamError(req controlRequest, err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if req.Type != controlRequestShell {
+		return false
+	}
+
+	var exitErr *ssh.ExitError
+	return errors.As(err, &exitErr)
 }
 
 func (m *controlMaster) touch() {
@@ -320,7 +333,9 @@ func readClientStream(conn net.Conn, stdin io.WriteCloser, session *ssh.Session)
 	for {
 		frameType, payload, err := readStreamFrame(conn)
 		if err != nil {
-			_ = session.Close()
+			if !errors.Is(err, io.EOF) {
+				_ = session.Close()
+			}
 			return
 		}
 

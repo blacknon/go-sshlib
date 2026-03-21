@@ -125,7 +125,9 @@ type Connect struct {
 	// When greater than zero, sshlib will try to start a detached helper process.
 	ControlPersist time.Duration
 
-	// ControlPersistAuth contains re-playable authentication data for the detached helper.
+	// ControlPersistAuth contains auth methods that can be replayed by the detached helper.
+	// Set ControlPersistAuth.AuthMethods with auth methods created by
+	// sshlib.CreateAuthMethodPassword or sshlib.CreateAuthMethodPublicKey.
 	// Required when ControlPersist > 0 and no master is already running.
 	ControlPersistAuth *ControlPersistAuth
 
