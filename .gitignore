@@ -19,6 +19,7 @@
 
 _TEST
 _test
+vendor/
 
 .mise.toml
 .tmp
