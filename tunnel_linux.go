@@ -10,9 +10,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
+
+type linuxTunnelDevice struct {
+	file *os.File
+	fd   int
+}
 
 func openTunnelDevice(unit int, mode TunnelMode) (*tunnelDevice, error) {
 	name := buildLinuxTunnelName(unit, mode)
@@ -56,10 +62,48 @@ func openTunnelDevice(unit int, mode TunnelMode) (*tunnelDevice, error) {
 	}
 
 	return &tunnelDevice{
-		ReadWriteCloser: file,
+		ReadWriteCloser: &linuxTunnelDevice{file: file, fd: int(file.Fd())},
 		Name:            actualName,
 		Unit:            actualUnit,
 	}, nil
+}
+
+func (d *linuxTunnelDevice) Read(p []byte) (int, error) {
+	for {
+		n, err := unix.Read(d.fd, p)
+		if err == nil {
+			return n, nil
+		}
+		if errors.Is(err, syscall.EINTR) {
+			continue
+		}
+		return 0, err
+	}
+}
+
+func (d *linuxTunnelDevice) Write(p []byte) (int, error) {
+	written := 0
+	for written < len(p) {
+		n, err := unix.Write(d.fd, p[written:])
+		if err != nil {
+			if errors.Is(err, syscall.EINTR) {
+				continue
+			}
+			return written, err
+		}
+		written += n
+	}
+	return written, nil
+}
+
+func (d *linuxTunnelDevice) Close() error {
+	if d.file == nil {
+		return nil
+	}
+	err := d.file.Close()
+	d.file = nil
+	d.fd = -1
+	return err
 }
 
 func formatLinuxTunnelOpenError(err error) error {
