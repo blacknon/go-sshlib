@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -159,13 +161,57 @@ func (c *Connect) TunnelWithMode(localTun, remoteTun int, mode TunnelMode) (*Tun
 }
 
 func (t *Tunnel) copyPackets(dst io.Writer, src io.Reader) {
-	_, err := io.Copy(dst, src)
-	if err != nil && !errors.Is(err, io.EOF) {
-		t.finish(err)
-	} else {
-		t.finish(nil)
+	buf := make([]byte, 64*1024)
+
+	for {
+		n, err := src.Read(buf)
+		if err != nil {
+			if shouldRetryTunnelCopyError(err) {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			if !errors.Is(err, io.EOF) {
+				t.finish(err)
+			} else {
+				t.finish(nil)
+			}
+			_ = t.Close()
+			return
+		}
+
+		if n == 0 {
+			continue
+		}
+
+		if _, err := dst.Write(buf[:n]); err != nil {
+			if shouldRetryTunnelCopyError(err) {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			if !errors.Is(err, io.EOF) {
+				t.finish(err)
+			} else {
+				t.finish(nil)
+			}
+			_ = t.Close()
+			return
+		}
 	}
-	_ = t.Close()
+}
+
+func shouldRetryTunnelCopyError(err error) bool {
+	switch {
+	case errors.Is(err, syscall.EIO):
+		return true
+	case errors.Is(err, syscall.EHOSTDOWN):
+		return true
+	case errors.Is(err, syscall.EAGAIN):
+		return true
+	case errors.Is(err, syscall.EWOULDBLOCK):
+		return true
+	default:
+		return false
+	}
 }
 
 func (m TunnelMode) validate() error {
