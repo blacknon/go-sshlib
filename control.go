@@ -316,11 +316,11 @@ func pipeStreamToConn(r io.Reader, writer *lockedFrameWriter, frameType byte, se
 
 func readClientStream(conn net.Conn, stdin io.WriteCloser, session *ssh.Session) {
 	defer stdin.Close()
-	defer session.Close()
 
 	for {
 		frameType, payload, err := readStreamFrame(conn)
 		if err != nil {
+			_ = session.Close()
 			return
 		}
 
