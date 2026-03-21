@@ -52,7 +52,7 @@ func TestControlMasterCommandWithDockerSSHD(t *testing.T) {
 	port := getenvDefault("SSHLIB_TEST_PORT", "2222")
 	user := getenvDefault("SSHLIB_TEST_USER", "testuser")
 	password := getenvDefault("SSHLIB_TEST_PASSWORD", "testpass")
-	controlPath := filepath.Join(t.TempDir(), "control.sock")
+	controlPath := shortControlPath(t, "control.sock")
 
 	master := &Connect{
 		ControlMaster:      "auto",
@@ -95,7 +95,7 @@ func TestControlPersistReplacesExpiredMaster(t *testing.T) {
 	port := getenvDefault("SSHLIB_TEST_PORT", "2222")
 	user := getenvDefault("SSHLIB_TEST_USER", "testuser")
 	password := getenvDefault("SSHLIB_TEST_PASSWORD", "testpass")
-	controlPath := filepath.Join(t.TempDir(), "persist.sock")
+	controlPath := shortControlPath(t, "persist.sock")
 	persist := 1200 * time.Millisecond
 
 	runCommand := func(expected string) {
@@ -131,4 +131,18 @@ func getenvDefault(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+func shortControlPath(t *testing.T, name string) string {
+	t.Helper()
+
+	dir, err := os.MkdirTemp("/tmp", "go-sshlib-")
+	if err != nil {
+		t.Fatalf("MkdirTemp() error = %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
+
+	return filepath.Join(dir, name)
 }
