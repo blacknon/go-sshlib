@@ -39,7 +39,7 @@ func main() {
 		ControlMaster:      "auto",
 		ControlPath:        controlPath,
 		ControlPersist:     10 * time.Minute,
-		ControlPersistAuth: sshlib.CreateControlPersistPublicKeyAuth(key, ""),
+		ControlPersistAuth: &sshlib.ControlPersistAuth{AuthMethods: []ssh.AuthMethod{authMethod}},
 	}
 
 	if err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod}); err != nil {

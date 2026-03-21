@@ -7,6 +7,7 @@ package sshlib
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -324,7 +325,14 @@ func (c *Connect) runControlSession(req controlRequest) error {
 
 	go c.copyControlInput(writer, input)
 
-	return c.copyControlOutput(conn, output, errput)
+	err = c.copyControlOutput(conn, output, errput)
+	if req.Type == controlRequestShell {
+		var exitErr *controlExitError
+		if errors.As(err, &exitErr) {
+			return nil
+		}
+	}
+	return err
 }
 
 func (c *Connect) controlSessionOptions(forceTTY bool) controlSessionOptions {
