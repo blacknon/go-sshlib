@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"sync/atomic"
-	"syscall"
 	"time"
 )
 
@@ -95,9 +93,7 @@ func (c *Connect) startDetachedControlMaster(host, port, user string) error {
 	cmd.Stdout = devNull
 	cmd.Stderr = devNull
 
-	if runtime.GOOS != "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	}
+	setDetachedSysProcAttr(cmd)
 
 	return cmd.Start()
 }
