@@ -87,6 +87,10 @@ func (c *Connect) Shell(session *ssh.Session) (err error) {
 
 	err = session.Wait()
 	if err != nil {
+		var exitErr *ssh.ExitError
+		if errors.As(err, &exitErr) {
+			return nil
+		}
 		return
 	}
 
@@ -151,6 +155,10 @@ func (c *Connect) CmdShell(session *ssh.Session, command string) (err error) {
 
 	err = session.Wait()
 	if err != nil {
+		var exitErr *ssh.ExitError
+		if errors.As(err, &exitErr) {
+			return nil
+		}
 		return
 	}
 
