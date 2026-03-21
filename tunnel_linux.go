@@ -7,6 +7,7 @@
 package sshlib
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -34,7 +35,7 @@ func openTunnelDevice(unit int, mode TunnelMode) (*tunnelDevice, error) {
 
 	file, err := os.OpenFile("/dev/net/tun", os.O_RDWR, 0)
 	if err != nil {
-		return nil, fmt.Errorf("open /dev/net/tun: %w", err)
+		return nil, formatLinuxTunnelOpenError(err)
 	}
 
 	if err := unix.IoctlIfreq(int(file.Fd()), unix.TUNSETIFF, ifr); err != nil {
@@ -59,4 +60,15 @@ func openTunnelDevice(unit int, mode TunnelMode) (*tunnelDevice, error) {
 		Name:            actualName,
 		Unit:            actualUnit,
 	}, nil
+}
+
+func formatLinuxTunnelOpenError(err error) error {
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		return fmt.Errorf("open /dev/net/tun: %w (TUN/TAP device is unavailable; ensure the tun module is loaded and, in containers, pass /dev/net/tun and NET_ADMIN)", err)
+	case errors.Is(err, os.ErrPermission):
+		return fmt.Errorf("open /dev/net/tun: %w (permission denied; try running with sufficient privileges or grant CAP_NET_ADMIN)", err)
+	default:
+		return fmt.Errorf("open /dev/net/tun: %w", err)
+	}
 }
