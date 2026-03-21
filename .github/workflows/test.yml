@@ -1,0 +1,35 @@
+# Copyright (c) 2019 Blacknon. All rights reserved.
+# Use of this source code is governed by an MIT license
+# that can be found in the LICENSE file.
+
+name: "go-sshlib test job."
+
+on:
+  push:
+    branches-ignore:
+      - master
+  pull_request:
+
+jobs:
+  build_test:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            task: test-unit
+          - os: macos-latest
+            task: test-unit
+          - os: ubuntu-latest
+            task: test-ci
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+
+      - name: Set up mise
+        uses: jdx/mise-action@v2
+        with:
+          install: true
+
+      - name: Test code
+        run: mise run ${{ matrix.task }}
