@@ -22,6 +22,48 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
+type ControlPersistAuth struct {
+	Type     string
+	Password string
+	KeyPath  string
+	KeyPass  string
+	CertPath string
+}
+
+func CreateControlPersistPasswordAuth(password string) *ControlPersistAuth {
+	return &ControlPersistAuth{
+		Type:     "password",
+		Password: password,
+	}
+}
+
+func CreateControlPersistPublicKeyAuth(keyPath, password string) *ControlPersistAuth {
+	return &ControlPersistAuth{
+		Type:    "publickey",
+		KeyPath: keyPath,
+		KeyPass: password,
+	}
+}
+
+func (a *ControlPersistAuth) createAuthMethods() ([]ssh.AuthMethod, error) {
+	if a == nil {
+		return nil, fmt.Errorf("sshlib: ControlPersistAuth is required for detached ControlPersist helper")
+	}
+
+	switch a.Type {
+	case "password":
+		return []ssh.AuthMethod{CreateAuthMethodPassword(a.Password)}, nil
+	case "publickey":
+		auth, err := CreateAuthMethodPublicKey(a.KeyPath, a.KeyPass)
+		if err != nil {
+			return nil, err
+		}
+		return []ssh.AuthMethod{auth}, nil
+	default:
+		return nil, fmt.Errorf("sshlib: unsupported ControlPersistAuth type %q", a.Type)
+	}
+}
+
 // CreateAuthMethodPassword returns ssh.AuthMethod generated from password.
 func CreateAuthMethodPassword(password string) (auth ssh.AuthMethod) {
 	return ssh.Password(password)
