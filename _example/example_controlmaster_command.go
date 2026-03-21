@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	host = "127.0.0.1"
+	host = "target.com"
 	port = "22"
 	user = "user"
 	key  = "~/.ssh/id_rsa"
