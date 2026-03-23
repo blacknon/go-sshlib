@@ -151,13 +151,6 @@ func (m *controlMaster) handleControlConn(conn net.Conn) {
 func (m *controlMaster) prepareSession(req controlRequest) (controlResponse, error) {
 	m.touch()
 
-	if req.Options.ForwardAgent {
-		return controlResponse{}, errors.New("sshlib: agent forwarding is not supported over ControlMaster yet")
-	}
-	if req.Options.ForwardX11 {
-		return controlResponse{}, errors.New("sshlib: X11 forwarding is not supported over ControlMaster yet")
-	}
-
 	streamPath, err := m.newStreamPath()
 	if err != nil {
 		return controlResponse{}, err
@@ -226,6 +219,18 @@ func (m *controlMaster) serveStream(req controlRequest, conn net.Conn) {
 
 	if req.Options.TTY {
 		if err := requestRemotePty(session, req.Options.Term, req.Options.Width, req.Options.Height); err != nil {
+			_ = writer.WriteFrame(streamFrameError, []byte(err.Error()))
+			_ = writer.WriteFrame(streamFrameExit, encodeExitStatus(255))
+			return
+		}
+	}
+
+	if req.Options.ForwardAgent {
+		m.connect.ForwardSshAgent(session)
+	}
+
+	if req.Options.ForwardX11 {
+		if err := m.connect.X11Forward(session); err != nil {
 			_ = writer.WriteFrame(streamFrameError, []byte(err.Error()))
 			_ = writer.WriteFrame(streamFrameExit, encodeExitStatus(255))
 			return
