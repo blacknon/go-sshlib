@@ -40,15 +40,19 @@ func init() {
 		return
 	}
 
+	debugln("sshlib: control persist helper starting")
 	err := runDetachedControlMaster(payload)
 	if err != nil {
+		debugln("sshlib: control persist helper failed:", err)
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	debugln("sshlib: control persist helper exited cleanly")
 	os.Exit(0)
 }
 
 func (c *Connect) startDetachedControlMaster(host, port, user string) error {
+	debugf("sshlib: startDetachedControlMaster host=%s port=%s user=%s control_path=%s\n", host, port, user, c.ControlPath)
 	if c.ControlPersistAuth == nil {
 		return errors.New("sshlib: ControlPersistAuth is required when ControlPersist is enabled")
 	}
@@ -86,6 +90,7 @@ func (c *Connect) startDetachedControlMaster(host, port, user string) error {
 	if err != nil {
 		return err
 	}
+	debugf("sshlib: detached helper payload encoded bytes=%d proxy_hops=%d\n", len(encoded), len(payload.ProxyRoute))
 
 	exe, err := os.Executable()
 	if err != nil {
@@ -113,9 +118,11 @@ func (c *Connect) startDetachedControlMaster(host, port, user string) error {
 	setDetachedSysProcAttr(cmd)
 	if err := cmd.Start(); err != nil {
 		cleanupPromptIPC()
+		debugln("sshlib: failed to start detached control master:", err)
 		return err
 	}
 
+	debugf("sshlib: detached control master started pid=%d\n", cmd.Process.Pid)
 	startControlPersistPromptIPC(promptBridge)
 	return nil
 }
@@ -142,17 +149,20 @@ func decodeControlPersistPayload(encoded string) (controlPersistPayload, error) 
 }
 
 func runDetachedControlMaster(encoded string) error {
+	debugln("sshlib: decoding control persist payload")
 	payload, err := decodeControlPersistPayload(encoded)
 	if err != nil {
 		return err
 	}
 
+	debugln("sshlib: loading control persist prompt bridge")
 	prompt, cleanupPrompt, err := loadControlPersistPrompt()
 	if err != nil {
 		return err
 	}
 	defer cleanupPrompt()
 
+	debugln("sshlib: rebuilding auth methods")
 	authMethods, err := createControlPersistAuthMethodsWithPrompt(payload.Auth, prompt)
 	if err != nil {
 		return err
@@ -167,6 +177,7 @@ func runDetachedControlMaster(encoded string) error {
 	}
 
 	if len(payload.ProxyRoute) > 0 {
+		debugf("sshlib: rebuilding proxy route hops=%d\n", len(payload.ProxyRoute))
 		dialer, proxyConnects, err := buildControlPersistProxyRouteDialer(payload.ProxyRoute, prompt)
 		if err != nil {
 			return err
@@ -175,11 +186,13 @@ func runDetachedControlMaster(encoded string) error {
 		con.proxyConnects = proxyConnects
 	}
 
+	debugf("sshlib: connecting target %s:%s as %s\n", payload.Host, payload.Port, payload.User)
 	if err := con.createDirectClient(payload.Host, payload.Port, payload.User, authMethods); err != nil {
 		_ = con.closeProxyConnects()
 		return err
 	}
 
+	debugln("sshlib: starting detached control master listener")
 	master, err := newDetachedControlMaster(con, payload.ControlPath, time.Duration(payload.ControlPersistNanos))
 	if err != nil {
 		_ = con.Client.Close()
