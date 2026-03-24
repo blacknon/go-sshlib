@@ -24,6 +24,7 @@ type controlPersistPayload struct {
 	OverwriteKnownHosts bool
 	KnownHostsFiles     []string
 	Auth                []controlPersistAuthMethodDefinition
+	ProxyRoute          []controlPersistProxyRoute
 }
 
 type detachedControlMaster struct {
@@ -63,6 +64,11 @@ func (c *Connect) startDetachedControlMaster(host, port, user string) error {
 		return err
 	}
 
+	serializedProxyRoute, err := serializeControlPersistProxyRoutes(c.ProxyRoute)
+	if err != nil {
+		return err
+	}
+
 	payload := controlPersistPayload{
 		Host:                host,
 		Port:                port,
@@ -73,6 +79,7 @@ func (c *Connect) startDetachedControlMaster(host, port, user string) error {
 		OverwriteKnownHosts: c.OverwriteKnownHosts,
 		KnownHostsFiles:     append([]string(nil), c.KnownHostsFiles...),
 		Auth:                resolvedAuths,
+		ProxyRoute:          serializedProxyRoute,
 	}
 
 	encoded, err := encodeControlPersistPayload(payload)
@@ -98,9 +105,19 @@ func (c *Connect) startDetachedControlMaster(host, port, user string) error {
 	cmd.Stdout = devNull
 	cmd.Stderr = devNull
 
-	setDetachedSysProcAttr(cmd)
+	promptBridge, cleanupPromptIPC, err := setupControlPersistPromptIPC(cmd)
+	if err != nil {
+		return err
+	}
 
-	return cmd.Start()
+	setDetachedSysProcAttr(cmd)
+	if err := cmd.Start(); err != nil {
+		cleanupPromptIPC()
+		return err
+	}
+
+	startControlPersistPromptIPC(promptBridge)
+	return nil
 }
 
 func encodeControlPersistPayload(payload controlPersistPayload) (string, error) {
@@ -130,7 +147,13 @@ func runDetachedControlMaster(encoded string) error {
 		return err
 	}
 
-	authMethods, err := createControlPersistAuthMethods(payload.Auth)
+	prompt, cleanupPrompt, err := loadControlPersistPrompt()
+	if err != nil {
+		return err
+	}
+	defer cleanupPrompt()
+
+	authMethods, err := createControlPersistAuthMethodsWithPrompt(payload.Auth, prompt)
 	if err != nil {
 		return err
 	}
@@ -143,7 +166,17 @@ func runDetachedControlMaster(encoded string) error {
 		ControlPersist:      time.Duration(payload.ControlPersistNanos),
 	}
 
+	if len(payload.ProxyRoute) > 0 {
+		dialer, proxyConnects, err := buildControlPersistProxyRouteDialer(payload.ProxyRoute, prompt)
+		if err != nil {
+			return err
+		}
+		con.ProxyDialer = dialer
+		con.proxyConnects = proxyConnects
+	}
+
 	if err := con.createDirectClient(payload.Host, payload.Port, payload.User, authMethods); err != nil {
+		_ = con.closeProxyConnects()
 		return err
 	}
 
