@@ -15,7 +15,7 @@ AllowUsers testuser
 
 AllowAgentForwarding yes
 AllowTcpForwarding yes
-X11Forwarding no
+X11Forwarding yes
 PermitUserEnvironment yes
 
 Subsystem sftp internal-sftp
