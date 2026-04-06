@@ -23,6 +23,10 @@ const (
 	controlRequestCmdShell = "cmdshell"
 	controlRequestCommand  = "command"
 	controlRequestTunnel   = "tunnel"
+	controlRequestDial     = "dial"
+	controlRequestListen   = "listen"
+	controlRequestAccept   = "accept"
+	controlRequestClose    = "close"
 )
 
 const (
@@ -36,16 +40,21 @@ const (
 )
 
 type controlRequest struct {
-	Type    string
-	Command string
-	Options controlSessionOptions
-	Tunnel  controlTunnelOptions
+	Type       string
+	Command    string
+	Network    string
+	Address    string
+	ListenerID uint64
+	Options    controlSessionOptions
+	Tunnel     controlTunnelOptions
 }
 
 type controlResponse struct {
 	OK         bool
 	Error      string
 	StreamPath string
+	Address    string
+	ListenerID uint64
 }
 
 type controlSessionOptions struct {
@@ -68,6 +77,9 @@ type controlMaster struct {
 	path           string
 	listener       net.Listener
 	closeOnce      sync.Once
+	listenerMu     sync.Mutex
+	nextListenerID uint64
+	listeners      map[uint64]net.Listener
 	sessionMu      sync.Mutex
 	sessionCond    *sync.Cond
 	activeSessions int
@@ -76,6 +88,12 @@ type controlMaster struct {
 
 type controlClient struct {
 	path string
+}
+
+type controlListener struct {
+	client *controlClient
+	id     uint64
+	addr   net.Addr
 }
 
 type lockedFrameWriter struct {
@@ -106,9 +124,10 @@ func newControlMaster(c *Connect, path string) (*controlMaster, error) {
 	_ = os.Chmod(path, 0600)
 
 	m := &controlMaster{
-		connect:  c,
-		path:     path,
-		listener: listener,
+		connect:   c,
+		path:      path,
+		listener:  listener,
+		listeners: map[uint64]net.Listener{},
 	}
 	m.sessionCond = sync.NewCond(&m.sessionMu)
 
@@ -151,6 +170,33 @@ func (m *controlMaster) handleControlConn(conn net.Conn) {
 			return
 		}
 		_ = encoder.Encode(resp)
+	case controlRequestDial:
+		resp, err := m.prepareDial(req)
+		if err != nil {
+			_ = encoder.Encode(controlResponse{OK: false, Error: err.Error()})
+			return
+		}
+		_ = encoder.Encode(resp)
+	case controlRequestListen:
+		resp, err := m.prepareListener(req)
+		if err != nil {
+			_ = encoder.Encode(controlResponse{OK: false, Error: err.Error()})
+			return
+		}
+		_ = encoder.Encode(resp)
+	case controlRequestAccept:
+		resp, err := m.prepareAccept(req)
+		if err != nil {
+			_ = encoder.Encode(controlResponse{OK: false, Error: err.Error()})
+			return
+		}
+		_ = encoder.Encode(resp)
+	case controlRequestClose:
+		if err := m.closeListener(req.ListenerID); err != nil {
+			_ = encoder.Encode(controlResponse{OK: false, Error: err.Error()})
+			return
+		}
+		_ = encoder.Encode(controlResponse{OK: true})
 	default:
 		_ = encoder.Encode(controlResponse{OK: false, Error: fmt.Sprintf("unknown control request: %s", req.Type)})
 	}
@@ -190,6 +236,135 @@ func (m *controlMaster) prepareSession(req controlRequest) (controlResponse, err
 	}()
 
 	return controlResponse{OK: true, StreamPath: streamPath}, nil
+}
+
+func (m *controlMaster) prepareDial(req controlRequest) (controlResponse, error) {
+	m.touch()
+
+	streamPath, err := m.newStreamPath()
+	if err != nil {
+		return controlResponse{}, err
+	}
+
+	listener, err := net.Listen("unix", streamPath)
+	if err != nil {
+		return controlResponse{}, err
+	}
+
+	_ = os.Chmod(streamPath, 0600)
+
+	go func() {
+		defer listener.Close()
+		defer os.Remove(streamPath)
+
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		remote, err := m.connect.Client.Dial(req.Network, req.Address)
+		if err != nil {
+			return
+		}
+		defer remote.Close()
+
+		m.touch()
+		m.connect.forwarder(conn, remote)
+	}()
+
+	return controlResponse{OK: true, StreamPath: streamPath}, nil
+}
+
+func (m *controlMaster) prepareListener(req controlRequest) (controlResponse, error) {
+	m.touch()
+
+	listener, err := m.connect.Client.Listen(req.Network, req.Address)
+	if err != nil {
+		return controlResponse{}, err
+	}
+
+	m.listenerMu.Lock()
+	m.nextListenerID++
+	id := m.nextListenerID
+	m.listeners[id] = listener
+	m.listenerMu.Unlock()
+
+	return controlResponse{
+		OK:         true,
+		Address:    listener.Addr().String(),
+		ListenerID: id,
+	}, nil
+}
+
+func (m *controlMaster) prepareAccept(req controlRequest) (controlResponse, error) {
+	m.touch()
+
+	listener, err := m.lookupListener(req.ListenerID)
+	if err != nil {
+		return controlResponse{}, err
+	}
+
+	streamPath, err := m.newStreamPath()
+	if err != nil {
+		return controlResponse{}, err
+	}
+
+	streamListener, err := net.Listen("unix", streamPath)
+	if err != nil {
+		return controlResponse{}, err
+	}
+
+	_ = os.Chmod(streamPath, 0600)
+
+	go func() {
+		defer streamListener.Close()
+		defer os.Remove(streamPath)
+
+		conn, err := streamListener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		remote, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer remote.Close()
+
+		m.touch()
+		m.connect.forwarder(conn, remote)
+	}()
+
+	return controlResponse{OK: true, StreamPath: streamPath}, nil
+}
+
+func (m *controlMaster) lookupListener(id uint64) (net.Listener, error) {
+	m.listenerMu.Lock()
+	defer m.listenerMu.Unlock()
+
+	listener, ok := m.listeners[id]
+	if !ok {
+		return nil, fmt.Errorf("sshlib: control listener not found: %d", id)
+	}
+
+	return listener, nil
+}
+
+func (m *controlMaster) closeListener(id uint64) error {
+	m.listenerMu.Lock()
+	listener, ok := m.listeners[id]
+	if ok {
+		delete(m.listeners, id)
+	}
+	m.listenerMu.Unlock()
+
+	if !ok {
+		return nil
+	}
+
+	return listener.Close()
 }
 
 func (m *controlMaster) newStreamPath() (string, error) {
@@ -478,8 +653,20 @@ func (m *controlMaster) Close() error {
 	var err error
 	m.closeOnce.Do(func() {
 		m.waitForSessionsToDrain()
+		m.listenerMu.Lock()
+		for id, listener := range m.listeners {
+			closeErr := listener.Close()
+			if err == nil {
+				err = closeErr
+			}
+			delete(m.listeners, id)
+		}
+		m.listenerMu.Unlock()
 		if m.listener != nil {
-			err = m.listener.Close()
+			closeErr := m.listener.Close()
+			if err == nil {
+				err = closeErr
+			}
 		}
 		if m.connect.Client != nil {
 			closeErr := m.connect.Client.Close()
@@ -577,6 +764,70 @@ func (c *controlClient) Close() error {
 func (c *controlClient) Ping() error {
 	_, err := c.request(controlRequest{Type: controlRequestPing})
 	return err
+}
+
+func (c *controlClient) Dial(network, addr string) (net.Conn, error) {
+	resp, err := c.request(controlRequest{
+		Type:    controlRequestDial,
+		Network: network,
+		Address: addr,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return net.Dial("unix", resp.StreamPath)
+}
+
+func (c *controlClient) Listen(network, addr string) (net.Listener, error) {
+	resp, err := c.request(controlRequest{
+		Type:    controlRequestListen,
+		Network: network,
+		Address: addr,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &controlListener{
+		client: c,
+		id:     resp.ListenerID,
+		addr:   controlListenerAddr(resp.Address),
+	}, nil
+}
+
+func (l *controlListener) Accept() (net.Conn, error) {
+	resp, err := l.client.request(controlRequest{
+		Type:       controlRequestAccept,
+		ListenerID: l.id,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return net.Dial("unix", resp.StreamPath)
+}
+
+func (l *controlListener) Close() error {
+	_, err := l.client.request(controlRequest{
+		Type:       controlRequestClose,
+		ListenerID: l.id,
+	})
+	return err
+}
+
+func (l *controlListener) Addr() net.Addr {
+	return l.addr
+}
+
+type controlListenerAddr string
+
+func (a controlListenerAddr) Network() string {
+	return "tcp"
+}
+
+func (a controlListenerAddr) String() string {
+	return string(a)
 }
 
 func (c *controlClient) request(req controlRequest) (controlResponse, error) {

@@ -51,7 +51,7 @@ func (c *Connect) NFSForward(address, port, basepoint string) (err error) {
 // This port is forawrd GO-NFS Server.
 func (c *Connect) NFSReverseForward(address, port, sharepoint string) (err error) {
 	// create listener
-	listener, err := c.Client.Listen("tcp", net.JoinHostPort(address, port))
+	listener, err := c.Listen("tcp", net.JoinHostPort(address, port))
 	if err != nil {
 		return
 	}
