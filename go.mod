@@ -10,10 +10,10 @@ require (
 	github.com/lunixbochs/vtclean v1.0.0
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
-	golang.org/x/crypto v0.26.0
-	golang.org/x/net v0.28.0
-	golang.org/x/sys v0.24.0
-	golang.org/x/term v0.23.0
+	golang.org/x/crypto v0.36.0
+	golang.org/x/net v0.38.0
+	golang.org/x/sys v0.31.0
+	golang.org/x/term v0.30.0
 )
 
 require (
