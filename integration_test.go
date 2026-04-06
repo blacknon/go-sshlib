@@ -216,7 +216,7 @@ func TestControlMasterTCPLocalForwardWithDockerSSHD(t *testing.T) {
 	_, slave, port := newControlMasterPair(t)
 
 	localAddr := "127.0.0.1:" + port
-	remoteAddr := "127.0.0.1:22"
+	remoteAddr := testSSHServiceAddr()
 
 	if err := slave.TCPLocalForward(localAddr, remoteAddr); err != nil {
 		t.Fatalf("TCPLocalForward() error = %v", err)
@@ -253,7 +253,7 @@ func TestControlMasterTCPDynamicForwardWithDockerSSHD(t *testing.T) {
 		t.Fatalf("proxy.SOCKS5() error = %v", err)
 	}
 
-	conn, err := dialer.Dial("tcp", "127.0.0.1:22")
+	conn, err := dialer.Dial("tcp", testSSHServiceAddr())
 	if err != nil {
 		t.Fatalf("SOCKS5 dial error = %v", err)
 	}
@@ -401,6 +401,13 @@ func newControlMasterPair(t *testing.T) (*Connect, *Connect, string) {
 	})
 
 	return master, slave, freeTCPPort(t)
+}
+
+func testSSHServiceAddr() string {
+	return net.JoinHostPort(
+		getenvDefault("SSHLIB_TEST_HOST", "127.0.0.1"),
+		getenvDefault("SSHLIB_TEST_PORT", "2222"),
+	)
 }
 
 func freeTCPPort(t *testing.T) string {

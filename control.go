@@ -56,6 +56,8 @@ type controlResponse struct {
 	StreamPath string
 	Address    string
 	ListenerID uint64
+	LocalAddr  controlAddr
+	RemoteAddr controlAddr
 }
 
 type controlSessionOptions struct {
@@ -95,6 +97,17 @@ type controlListener struct {
 	client *controlClient
 	id     uint64
 	addr   net.Addr
+}
+
+type controlAddr struct {
+	Network string
+	Address string
+}
+
+type controlConn struct {
+	net.Conn
+	localAddr  net.Addr
+	remoteAddr net.Addr
 }
 
 type lockedFrameWriter struct {
@@ -253,6 +266,8 @@ func (m *controlMaster) prepareDial(req controlRequest) (controlResponse, error)
 	if err != nil {
 		return controlResponse{}, err
 	}
+	localAddr := encodeControlAddr(remote.LocalAddr())
+	remoteAddr := encodeControlAddr(remote.RemoteAddr())
 
 	streamPath, err := m.newStreamPath()
 	if err != nil {
@@ -283,7 +298,12 @@ func (m *controlMaster) prepareDial(req controlRequest) (controlResponse, error)
 		m.connect.forwarder(conn, remote)
 	}()
 
-	return controlResponse{OK: true, StreamPath: streamPath}, nil
+	return controlResponse{
+		OK:         true,
+		StreamPath: streamPath,
+		LocalAddr:  localAddr,
+		RemoteAddr: remoteAddr,
+	}, nil
 }
 
 func (m *controlMaster) prepareSubsystem(req controlRequest) (controlResponse, error) {
@@ -402,19 +422,29 @@ func (m *controlMaster) prepareAccept(req controlRequest) (controlResponse, erro
 		return controlResponse{}, err
 	}
 
+	remote, err := listener.Accept()
+	if err != nil {
+		return controlResponse{}, err
+	}
+	localAddr := encodeControlAddr(remote.LocalAddr())
+	remoteAddr := encodeControlAddr(remote.RemoteAddr())
+
 	streamPath, err := m.newStreamPath()
 	if err != nil {
+		_ = remote.Close()
 		return controlResponse{}, err
 	}
 
 	streamListener, err := net.Listen("unix", streamPath)
 	if err != nil {
+		_ = remote.Close()
 		return controlResponse{}, err
 	}
 
 	_ = os.Chmod(streamPath, 0600)
 
 	go func() {
+		defer remote.Close()
 		defer streamListener.Close()
 		defer os.Remove(streamPath)
 
@@ -424,17 +454,16 @@ func (m *controlMaster) prepareAccept(req controlRequest) (controlResponse, erro
 		}
 		defer conn.Close()
 
-		remote, err := listener.Accept()
-		if err != nil {
-			return
-		}
-		defer remote.Close()
-
 		m.touch()
 		m.connect.forwarder(conn, remote)
 	}()
 
-	return controlResponse{OK: true, StreamPath: streamPath}, nil
+	return controlResponse{
+		OK:         true,
+		StreamPath: streamPath,
+		LocalAddr:  localAddr,
+		RemoteAddr: remoteAddr,
+	}, nil
 }
 
 func (m *controlMaster) lookupListener(id uint64) (net.Listener, error) {
@@ -873,7 +902,16 @@ func (c *controlClient) Dial(network, addr string) (net.Conn, error) {
 		return nil, err
 	}
 
-	return net.Dial("unix", resp.StreamPath)
+	conn, err := net.Dial("unix", resp.StreamPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &controlConn{
+		Conn:       conn,
+		localAddr:  decodeControlAddr(resp.LocalAddr),
+		remoteAddr: decodeControlAddr(resp.RemoteAddr),
+	}, nil
 }
 
 func (c *controlClient) Listen(network, addr string) (net.Listener, error) {
@@ -902,7 +940,16 @@ func (l *controlListener) Accept() (net.Conn, error) {
 		return nil, err
 	}
 
-	return net.Dial("unix", resp.StreamPath)
+	conn, err := net.Dial("unix", resp.StreamPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &controlConn{
+		Conn:       conn,
+		localAddr:  decodeControlAddr(resp.LocalAddr),
+		remoteAddr: decodeControlAddr(resp.RemoteAddr),
+	}, nil
 }
 
 func (l *controlListener) Close() error {
@@ -919,12 +966,66 @@ func (l *controlListener) Addr() net.Addr {
 
 type controlListenerAddr string
 
+type staticAddr struct {
+	network string
+	address string
+}
+
 func (a controlListenerAddr) Network() string {
 	return "tcp"
 }
 
 func (a controlListenerAddr) String() string {
 	return string(a)
+}
+
+func (a staticAddr) Network() string {
+	return a.network
+}
+
+func (a staticAddr) String() string {
+	return a.address
+}
+
+func (c *controlConn) LocalAddr() net.Addr {
+	if c.localAddr != nil {
+		return c.localAddr
+	}
+	return c.Conn.LocalAddr()
+}
+
+func (c *controlConn) RemoteAddr() net.Addr {
+	if c.remoteAddr != nil {
+		return c.remoteAddr
+	}
+	return c.Conn.RemoteAddr()
+}
+
+func encodeControlAddr(addr net.Addr) controlAddr {
+	if addr == nil {
+		return controlAddr{}
+	}
+	return controlAddr{
+		Network: addr.Network(),
+		Address: addr.String(),
+	}
+}
+
+func decodeControlAddr(addr controlAddr) net.Addr {
+	if addr.Address == "" {
+		return nil
+	}
+
+	switch addr.Network {
+	case "tcp", "tcp4", "tcp6":
+		if tcpAddr, err := net.ResolveTCPAddr(addr.Network, addr.Address); err == nil {
+			return tcpAddr
+		}
+	case "unix", "unixgram", "unixpacket":
+		return &net.UnixAddr{Name: addr.Address, Net: addr.Network}
+	}
+
+	return staticAddr{network: addr.Network, address: addr.Address}
 }
 
 func (c *controlClient) request(req controlRequest) (controlResponse, error) {
