@@ -18,15 +18,16 @@ import (
 )
 
 const (
-	controlRequestPing     = "ping"
-	controlRequestShell    = "shell"
-	controlRequestCmdShell = "cmdshell"
-	controlRequestCommand  = "command"
-	controlRequestTunnel   = "tunnel"
-	controlRequestDial     = "dial"
-	controlRequestListen   = "listen"
-	controlRequestAccept   = "accept"
-	controlRequestClose    = "close"
+	controlRequestPing      = "ping"
+	controlRequestShell     = "shell"
+	controlRequestCmdShell  = "cmdshell"
+	controlRequestCommand   = "command"
+	controlRequestSubsystem = "subsystem"
+	controlRequestTunnel    = "tunnel"
+	controlRequestDial      = "dial"
+	controlRequestListen    = "listen"
+	controlRequestAccept    = "accept"
+	controlRequestClose     = "close"
 )
 
 const (
@@ -170,6 +171,13 @@ func (m *controlMaster) handleControlConn(conn net.Conn) {
 			return
 		}
 		_ = encoder.Encode(resp)
+	case controlRequestSubsystem:
+		resp, err := m.prepareSubsystem(req)
+		if err != nil {
+			_ = encoder.Encode(controlResponse{OK: false, Error: err.Error()})
+			return
+		}
+		_ = encoder.Encode(resp)
 	case controlRequestDial:
 		resp, err := m.prepareDial(req)
 		if err != nil {
@@ -241,13 +249,20 @@ func (m *controlMaster) prepareSession(req controlRequest) (controlResponse, err
 func (m *controlMaster) prepareDial(req controlRequest) (controlResponse, error) {
 	m.touch()
 
+	remote, err := m.connect.Client.Dial(req.Network, req.Address)
+	if err != nil {
+		return controlResponse{}, err
+	}
+
 	streamPath, err := m.newStreamPath()
 	if err != nil {
+		_ = remote.Close()
 		return controlResponse{}, err
 	}
 
 	listener, err := net.Listen("unix", streamPath)
 	if err != nil {
+		_ = remote.Close()
 		return controlResponse{}, err
 	}
 
@@ -256,6 +271,7 @@ func (m *controlMaster) prepareDial(req controlRequest) (controlResponse, error)
 	go func() {
 		defer listener.Close()
 		defer os.Remove(streamPath)
+		defer remote.Close()
 
 		conn, err := listener.Accept()
 		if err != nil {
@@ -263,14 +279,95 @@ func (m *controlMaster) prepareDial(req controlRequest) (controlResponse, error)
 		}
 		defer conn.Close()
 
-		remote, err := m.connect.Client.Dial(req.Network, req.Address)
+		m.touch()
+		m.connect.forwarder(conn, remote)
+	}()
+
+	return controlResponse{OK: true, StreamPath: streamPath}, nil
+}
+
+func (m *controlMaster) prepareSubsystem(req controlRequest) (controlResponse, error) {
+	m.touch()
+	m.acquireSession()
+
+	session, err := m.connect.Client.NewSession()
+	if err != nil {
+		m.releaseSession()
+		return controlResponse{}, err
+	}
+
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		session.Close()
+		m.releaseSession()
+		return controlResponse{}, err
+	}
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		session.Close()
+		m.releaseSession()
+		return controlResponse{}, err
+	}
+
+	stderr, err := session.StderrPipe()
+	if err != nil {
+		session.Close()
+		m.releaseSession()
+		return controlResponse{}, err
+	}
+
+	if err := session.RequestSubsystem(req.Command); err != nil {
+		session.Close()
+		m.releaseSession()
+		return controlResponse{}, err
+	}
+
+	stopKeepAlive := m.connect.startSessionKeepAlive(session)
+
+	streamPath, err := m.newStreamPath()
+	if err != nil {
+		stopKeepAlive()
+		session.Close()
+		m.releaseSession()
+		return controlResponse{}, err
+	}
+
+	listener, err := net.Listen("unix", streamPath)
+	if err != nil {
+		stopKeepAlive()
+		session.Close()
+		m.releaseSession()
+		return controlResponse{}, err
+	}
+
+	_ = os.Chmod(streamPath, 0600)
+
+	go func() {
+		defer listener.Close()
+		defer os.Remove(streamPath)
+		defer stopKeepAlive()
+		defer session.Close()
+		defer m.releaseSession()
+
+		conn, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		defer remote.Close()
+		defer conn.Close()
 
+		go func() {
+			_, _ = io.Copy(stdin, conn)
+			_ = stdin.Close()
+		}()
+		go func() {
+			_, _ = io.Copy(io.Discard, stderr)
+		}()
+
+		_, _ = io.Copy(conn, stdout)
+		_ = session.Close()
+		_ = session.Wait()
 		m.touch()
-		m.connect.forwarder(conn, remote)
 	}()
 
 	return controlResponse{OK: true, StreamPath: streamPath}, nil

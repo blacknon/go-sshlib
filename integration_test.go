@@ -270,6 +270,77 @@ func TestControlMasterTCPDynamicForwardWithDockerSSHD(t *testing.T) {
 	}
 }
 
+func TestControlMasterDialReturnsRemoteErrorWithDockerSSHD(t *testing.T) {
+	if os.Getenv("SSHLIB_INTEGRATION") == "" {
+		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
+	}
+
+	_, slave, _ := newControlMasterPair(t)
+
+	conn, err := slave.Dial("tcp", "127.0.0.1:1")
+	if err == nil {
+		conn.Close()
+		t.Fatal("Dial() error = nil, want remote dial error")
+	}
+}
+
+func TestControlMasterTCPDynamicForwardReturnsDialErrorWithDockerSSHD(t *testing.T) {
+	if os.Getenv("SSHLIB_INTEGRATION") == "" {
+		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
+	}
+
+	_, slave, port := newControlMasterPair(t)
+
+	localAddr := "127.0.0.1:" + port
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- slave.TCPDynamicForward("127.0.0.1", port)
+	}()
+
+	waitForTCPReady(t, localAddr)
+
+	dialer, err := proxy.SOCKS5("tcp", localAddr, nil, proxy.Direct)
+	if err != nil {
+		t.Fatalf("proxy.SOCKS5() error = %v", err)
+	}
+
+	conn, err := dialer.Dial("tcp", "127.0.0.1:1")
+	if err == nil {
+		conn.Close()
+		t.Fatal("SOCKS5 dial error = nil, want remote dial error")
+	}
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("TCPDynamicForward() error = %v", err)
+		}
+	default:
+	}
+}
+
+func TestControlMasterSFTPClientWithDockerSSHD(t *testing.T) {
+	if os.Getenv("SSHLIB_INTEGRATION") == "" {
+		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
+	}
+
+	_, slave, _ := newControlMasterPair(t)
+
+	client, err := slave.newSFTPClient()
+	if err != nil {
+		t.Fatalf("newSFTPClient() error = %v", err)
+	}
+	defer client.Close()
+
+	path, err := client.RealPath(".")
+	if err != nil {
+		t.Fatalf("RealPath(.) error = %v", err)
+	}
+	if path == "" {
+		t.Fatal("RealPath(.) = empty path, want non-empty path")
+	}
+}
+
 func getenvDefault(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
