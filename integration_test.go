@@ -528,9 +528,8 @@ func waitForUnixReady(t *testing.T, path string) {
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("unix", path, 200*time.Millisecond)
-		if err == nil {
-			_ = conn.Close()
+		info, err := os.Stat(path)
+		if err == nil && info.Mode()&os.ModeSocket != 0 {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
