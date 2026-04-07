@@ -49,6 +49,24 @@ func ExampleConnect_TCPLocalForward() {
 	con.CreateClient(host, user, port, []ssh.AuthMethod{authMethod})
 }
 
+func ExampleConnect_UnixLocalForward() {
+	host := "target.com"
+	port := "22"
+	user := "user"
+	key := "~/.ssh/id_rsa"
+
+	localPath := "/tmp/local.sock"
+	remotePath := "/tmp/remote.sock"
+
+	authMethod, _ := CreateAuthMethodPublicKey(key, "")
+
+	con := &Connect{}
+
+	con.UnixLocalForward(localPath, remotePath)
+
+	con.CreateClient(host, user, port, []ssh.AuthMethod{authMethod})
+}
+
 func TestConnect_X11Forward(t *testing.T) {
 	t.Skip("requires a live SSH session and X11 environment")
 }
