@@ -2,6 +2,8 @@ package sshlib
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -233,6 +235,89 @@ func TestControlMasterTCPLocalForwardWithDockerSSHD(t *testing.T) {
 	assertSSHBanner(t, conn)
 }
 
+func TestControlMasterUnixLocalForwardWithDockerSSHD(t *testing.T) {
+	if os.Getenv("SSHLIB_INTEGRATION") == "" {
+		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
+	}
+
+	_, slave, _ := newControlMasterPair(t)
+
+	localDir := shortControlPath(t, "unix-forward")
+	if err := os.MkdirAll(localDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	localPath := filepath.Join(localDir, "local.sock")
+	t.Cleanup(func() {
+		_ = os.Remove(localPath)
+	})
+
+	remotePath := fmt.Sprintf("/tmp/go-sshlib-controlmaster-unix-%d.sock", time.Now().UnixNano())
+
+	listener, err := slave.Listen("unix", remotePath)
+	if err != nil {
+		t.Fatalf("Listen(unix) error = %v", err)
+	}
+	defer listener.Close()
+
+	acceptErrCh := make(chan error, 1)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			acceptErrCh <- err
+			return
+		}
+		defer conn.Close()
+
+		buf := make([]byte, len("ping"))
+		if _, err := io.ReadFull(conn, buf); err != nil {
+			acceptErrCh <- err
+			return
+		}
+		if string(buf) != "ping" {
+			acceptErrCh <- fmt.Errorf("unexpected payload: got %q want %q", string(buf), "ping")
+			return
+		}
+		if _, err := conn.Write([]byte("pong")); err != nil {
+			acceptErrCh <- err
+			return
+		}
+
+		acceptErrCh <- nil
+	}()
+
+	if err := slave.UnixLocalForward(localPath, remotePath); err != nil {
+		t.Fatalf("UnixLocalForward() error = %v", err)
+	}
+
+	waitForUnixReady(t, localPath)
+
+	conn, err := net.DialTimeout("unix", localPath, 5*time.Second)
+	if err != nil {
+		t.Fatalf("DialTimeout(unix) error = %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		t.Fatalf("SetDeadline() error = %v", err)
+	}
+
+	if _, err := conn.Write([]byte("ping")); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	reply := make([]byte, len("pong"))
+	if _, err := io.ReadFull(conn, reply); err != nil {
+		t.Fatalf("ReadFull() error = %v", err)
+	}
+	if string(reply) != "pong" {
+		t.Fatalf("unexpected reply: got %q want %q", string(reply), "pong")
+	}
+
+	if err := <-acceptErrCh; err != nil {
+		t.Fatalf("remote unix listener error = %v", err)
+	}
+}
+
 func TestControlMasterTCPDynamicForwardWithDockerSSHD(t *testing.T) {
 	if os.Getenv("SSHLIB_INTEGRATION") == "" {
 		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
@@ -436,6 +521,22 @@ func waitForTCPReady(t *testing.T, addr string) {
 	}
 
 	t.Fatalf("listener did not become ready: %s", addr)
+}
+
+func waitForUnixReady(t *testing.T, path string) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("unix", path, 200*time.Millisecond)
+		if err == nil {
+			_ = conn.Close()
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	t.Fatalf("listener did not become ready: %s", path)
 }
 
 func assertSSHBanner(t *testing.T, conn net.Conn) {
