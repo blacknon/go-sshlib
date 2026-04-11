@@ -8,14 +8,17 @@ require (
 	github.com/lunixbochs/vtclean v1.0.0
 	github.com/miekg/pkcs11 v1.1.2
 	github.com/moby/term v0.5.2
-	golang.org/x/crypto v0.49.0
-	golang.org/x/net v0.52.0
-	golang.org/x/sys v0.42.0
-	golang.org/x/term v0.41.0
+	golang.org/x/crypto v0.50.0
+	golang.org/x/net v0.53.0
+	golang.org/x/sys v0.43.0
+	golang.org/x/term v0.42.0
 )
 
 require (
+	github.com/absfs/absfs v1.0.0
+	github.com/absfs/smbfs v0.9.1
 	github.com/go-git/go-billy/v5 v5.8.0
+	github.com/hanwen/go-fuse/v2 v2.9.0
 	github.com/pkg/sftp v1.13.10
 	github.com/willscott/go-nfs v0.0.3
 )
@@ -24,8 +27,10 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/dchest/bcrypt_pbkdf v0.0.0-20150205184540-83f37f9c154a // indirect
+	github.com/geoffgarside/ber v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/hirochachacha/go-smb2 v1.1.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rasky/go-xdr v0.0.0-20170124162913-1a41d1a06c93 // indirect
