@@ -1,0 +1,24 @@
+on: [push, pull_request]
+name: Test wasip1
+permissions: {}
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.22.x,1.23.x]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Install wasirun
+      run: |
+        go install github.com/stealthrocket/wasi-go/cmd/wasirun@latest
+
+    - name: Test
+      run: make wasitest

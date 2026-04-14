@@ -39,3 +39,7 @@ require (
 )
 
 go 1.25.1
+
+replace github.com/go-git/go-billy/v5 => ./internal/third_party/github.com/go-git/go-billy/v5
+
+replace github.com/willscott/go-nfs => ./internal/third_party/github.com/willscott/go-nfs

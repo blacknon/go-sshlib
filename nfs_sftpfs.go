@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,16 +36,82 @@ func (f *sftpFile) Unlock() error {
 }
 
 func NewChangeSFTPFS(client *sftp.Client, base string) billy.Filesystem {
-	return temporal.New(
-		chroot.New(&SFTPFS{Client: client}, base),
-		"",
-	)
+	baseFS := &SFTPFS{Client: client}
+	rooted := temporal.New(chroot.New(baseFS, base), "")
+	return &changeChrootFS{
+		Filesystem: rooted,
+		root:       filepath.Clean(base),
+		change:     baseFS,
+	}
+}
+
+type changeChrootFS struct {
+	billy.Filesystem
+	root   string
+	change billy.Change
+}
+
+var _ billy.Change = (*changeChrootFS)(nil)
+
+func (fs *changeChrootFS) changePath(name string) (string, error) {
+	if isCrossBoundaryPath(name) {
+		return "", billy.ErrCrossedBoundary
+	}
+
+	clean := filepath.Clean(filepath.FromSlash(name))
+	if clean == "." || clean == string(filepath.Separator) {
+		return fs.root, nil
+	}
+
+	clean = strings.TrimPrefix(clean, string(filepath.Separator))
+	return filepath.Join(fs.root, clean), nil
+}
+
+func (fs *changeChrootFS) Chmod(name string, mode os.FileMode) error {
+	fullpath, err := fs.changePath(name)
+	if err != nil {
+		return err
+	}
+	return fs.change.Chmod(fullpath, mode)
+}
+
+func (fs *changeChrootFS) Lchown(name string, uid, gid int) error {
+	fullpath, err := fs.changePath(name)
+	if err != nil {
+		return err
+	}
+	return fs.change.Lchown(fullpath, uid, gid)
+}
+
+func (fs *changeChrootFS) Chown(name string, uid, gid int) error {
+	fullpath, err := fs.changePath(name)
+	if err != nil {
+		return err
+	}
+	return fs.change.Chown(fullpath, uid, gid)
+}
+
+func (fs *changeChrootFS) Chtimes(name string, atime, mtime time.Time) error {
+	fullpath, err := fs.changePath(name)
+	if err != nil {
+		return err
+	}
+	return fs.change.Chtimes(fullpath, atime, mtime)
+}
+
+func isCrossBoundaryPath(path string) bool {
+	path = filepath.ToSlash(path)
+	path = filepath.Clean(path)
+	return strings.HasPrefix(path, ".."+string(filepath.Separator))
 }
 
 type SFTPFS struct {
 	billy.Filesystem
 	Client *sftp.Client
+	mu     sync.Mutex
 }
+
+var _ billy.Change = (*SFTPFS)(nil)
 
 // Create
 func (fs *SFTPFS) Create(filename string) (billy.File, error) {
@@ -66,6 +133,9 @@ func (fs *SFTPFS) openFile(fn string, flag int, perm os.FileMode, createDir func
 		}
 	}
 
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
 	f, err := fs.Client.OpenFile(fn, flag)
 	if err != nil {
 		return nil, err
@@ -77,6 +147,8 @@ func (fs *SFTPFS) openFile(fn string, flag int, perm os.FileMode, createDir func
 func (fs *SFTPFS) createDir(fullpath string) error {
 	dir := filepath.Dir(fullpath)
 	if dir != "." {
+		fs.mu.Lock()
+		defer fs.mu.Unlock()
 		if err := fs.Client.MkdirAll(dir); err != nil {
 			return err
 		}
@@ -87,6 +159,9 @@ func (fs *SFTPFS) createDir(fullpath string) error {
 
 // ReadDir
 func (fs *SFTPFS) ReadDir(path string) ([]os.FileInfo, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
 	l, err := fs.Client.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -102,11 +177,16 @@ func (fs *SFTPFS) ReadDir(path string) ([]os.FileInfo, error) {
 
 // Rename
 func (fs *SFTPFS) Rename(from, to string) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	return fs.Client.Rename(from, to)
 }
 
 // MkdirAll
 func (fs *SFTPFS) MkdirAll(filename string, perm os.FileMode) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
 	err := fs.Client.MkdirAll(filename)
 	if err != nil {
 		return err
@@ -117,6 +197,9 @@ func (fs *SFTPFS) MkdirAll(filename string, perm os.FileMode) error {
 
 // Open
 func (fs *SFTPFS) Open(filename string) (billy.File, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
 	f, err := fs.Client.Open(filename)
 	if err != nil {
 		return nil, err
@@ -126,11 +209,15 @@ func (fs *SFTPFS) Open(filename string) (billy.File, error) {
 
 // Stat
 func (fs *SFTPFS) Stat(filename string) (os.FileInfo, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	return fs.Client.Stat(filepath.Clean(filename))
 }
 
 // Remove
 func (fs *SFTPFS) Remove(filename string) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	return fs.Client.Remove(filename)
 }
 
@@ -157,22 +244,52 @@ func (fs *SFTPFS) Join(elem ...string) string {
 
 // RemoveAll
 func (fs *SFTPFS) RemoveAll(filename string) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	return fs.Client.RemoveAll(filename)
 }
 
 // Lstat
 func (fs *SFTPFS) Lstat(filename string) (os.FileInfo, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	return fs.Client.Lstat(filepath.Clean(filename))
 }
 
 // Symlink
 func (fs *SFTPFS) Symlink(target, link string) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	return fs.Client.Symlink(target, link)
 }
 
 // Readlink
 func (fs *SFTPFS) Readlink(link string) (string, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	return fs.Client.ReadLink(link)
+}
+
+func (fs *SFTPFS) Chmod(name string, mode os.FileMode) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return fs.Client.Chmod(name, mode)
+}
+
+func (fs *SFTPFS) Lchown(name string, uid, gid int) error {
+	return fs.Chown(name, uid, gid)
+}
+
+func (fs *SFTPFS) Chown(name string, uid, gid int) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return fs.Client.Chown(name, uid, gid)
+}
+
+func (fs *SFTPFS) Chtimes(name string, atime, mtime time.Time) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return fs.Client.Chtimes(name, atime, mtime)
 }
 
 // Capabilities
