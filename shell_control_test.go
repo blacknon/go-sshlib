@@ -21,7 +21,7 @@ func TestCopyControlOutputReturnsUnexpectedEOF(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err := (&Connect{}).copyControlOutput(client, &stdout, &stderr)
+	err := (&Connect{}).copyControlOutput(client, &stdout, &stderr, nil)
 	if !errors.Is(err, io.ErrUnexpectedEOF) {
 		t.Fatalf("copyControlOutput() error = %v, want %v", err, io.ErrUnexpectedEOF)
 	}
@@ -45,7 +45,7 @@ func TestCopyControlOutputReadsExitFrame(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	if err := (&Connect{}).copyControlOutput(client, &stdout, &stderr); err != nil {
+	if err := (&Connect{}).copyControlOutput(client, &stdout, &stderr, nil); err != nil {
 		t.Fatalf("copyControlOutput() error = %v", err)
 	}
 
