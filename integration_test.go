@@ -50,6 +50,47 @@ func TestCreateClientWithDockerSSHD(t *testing.T) {
 	}
 }
 
+func TestAutoReconnectCreateSessionWithDockerSSHD(t *testing.T) {
+	if os.Getenv("SSHLIB_INTEGRATION") == "" {
+		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
+	}
+
+	host := getenvDefault("SSHLIB_TEST_HOST", "127.0.0.1")
+	port := getenvDefault("SSHLIB_TEST_PORT", "2222")
+	user := getenvDefault("SSHLIB_TEST_USER", "testuser")
+	password := getenvDefault("SSHLIB_TEST_PASSWORD", "testpass")
+
+	con := &Connect{
+		AutoReconnect: true,
+	}
+
+	authMethod := CreateAuthMethodPassword(password)
+	if err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod}); err != nil {
+		t.Fatalf("CreateClient() error = %v", err)
+	}
+	defer con.Close()
+
+	if err := con.Client.Close(); err != nil {
+		t.Fatalf("Client.Close() error = %v", err)
+	}
+	con.Client = nil
+
+	session, err := con.CreateSession()
+	if err != nil {
+		t.Fatalf("CreateSession() after reconnect error = %v", err)
+	}
+	defer session.Close()
+
+	output, err := session.Output("printf reconnected")
+	if err != nil {
+		t.Fatalf("session.Output() error = %v", err)
+	}
+
+	if string(output) != "reconnected" {
+		t.Fatalf("unexpected output: got %q want %q", string(output), "reconnected")
+	}
+}
+
 func TestControlMasterCommandWithDockerSSHD(t *testing.T) {
 	if os.Getenv("SSHLIB_INTEGRATION") == "" {
 		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
