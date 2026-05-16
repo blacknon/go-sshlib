@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -151,6 +152,10 @@ func TestControlMasterLookupListenerMissing(t *testing.T) {
 }
 
 func TestControlClientRequestSuccess(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("control client request uses Unix domain sockets")
+	}
+
 	socketPath := filepath.Join("/tmp", "sshlib-control-success.sock")
 	_ = os.Remove(socketPath)
 	listener, err := net.Listen("unix", socketPath)
@@ -200,6 +205,10 @@ func TestControlClientRequestSuccess(t *testing.T) {
 }
 
 func TestControlClientRequestRemoteError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("control client request uses Unix domain sockets")
+	}
+
 	socketPath := filepath.Join("/tmp", "sshlib-control-error.sock")
 	_ = os.Remove(socketPath)
 	listener, err := net.Listen("unix", socketPath)
