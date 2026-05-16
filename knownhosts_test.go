@@ -68,3 +68,26 @@ func TestWriteKnownHostsKeyOverwriteLine(t *testing.T) {
 		t.Fatalf("known_hosts lines = %#v", lines)
 	}
 }
+
+func TestWriteKnownHostsKeyUsesSingleAddressWhenRemoteMatchesHostname(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "known_hosts")
+	if err := os.WriteFile(path, []byte(""), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	key := testPublicKey(t)
+	remote := staticAddr{network: "tcp", address: "example.com"}
+	if err := writeKnownHostsKey(path, 0, "example.com", remote, key); err != nil {
+		t.Fatalf("writeKnownHostsKey() error = %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	text := strings.TrimSpace(string(data))
+	want := knownhosts.Line([]string{"example.com"}, key)
+	if text != want {
+		t.Fatalf("known_hosts entry = %q, want %q", text, want)
+	}
+}

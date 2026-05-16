@@ -2,6 +2,7 @@ package sshlib
 
 import (
 	"bytes"
+	"encoding/gob"
 	"errors"
 	"net"
 	"os"
@@ -147,4 +148,94 @@ func TestControlMasterLookupListenerMissing(t *testing.T) {
 	if err == nil {
 		t.Fatal("lookupListener() error = nil, want non-nil")
 	}
+}
+
+func TestControlClientRequestSuccess(t *testing.T) {
+	socketPath := filepath.Join("/tmp", "sshlib-control-success.sock")
+	_ = os.Remove(socketPath)
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatalf("Listen() error = %v", err)
+	}
+	defer func() {
+		_ = listener.Close()
+		_ = os.Remove(socketPath)
+	}()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		decoder := gob.NewDecoder(conn)
+		encoder := gob.NewEncoder(conn)
+
+		var req controlRequest
+		if err := decoder.Decode(&req); err != nil {
+			t.Errorf("Decode() error = %v", err)
+			return
+		}
+		if req.Type != controlRequestPing {
+			t.Errorf("req.Type = %q, want %q", req.Type, controlRequestPing)
+		}
+
+		if err := encoder.Encode(controlResponse{OK: true, Address: "ready"}); err != nil {
+			t.Errorf("Encode() error = %v", err)
+		}
+	}()
+
+	client := &controlClient{path: socketPath}
+	resp, err := client.request(controlRequest{Type: controlRequestPing})
+	if err != nil {
+		t.Fatalf("request() error = %v", err)
+	}
+	if !resp.OK {
+		t.Fatalf("request() response = %#v, want OK", resp)
+	}
+	<-done
+}
+
+func TestControlClientRequestRemoteError(t *testing.T) {
+	socketPath := filepath.Join("/tmp", "sshlib-control-error.sock")
+	_ = os.Remove(socketPath)
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatalf("Listen() error = %v", err)
+	}
+	defer func() {
+		_ = listener.Close()
+		_ = os.Remove(socketPath)
+	}()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		decoder := gob.NewDecoder(conn)
+		encoder := gob.NewEncoder(conn)
+		var req controlRequest
+		if err := decoder.Decode(&req); err != nil {
+			t.Errorf("Decode() error = %v", err)
+			return
+		}
+		if err := encoder.Encode(controlResponse{OK: false, Error: "boom"}); err != nil {
+			t.Errorf("Encode() error = %v", err)
+		}
+	}()
+
+	client := &controlClient{path: socketPath}
+	_, err = client.request(controlRequest{Type: controlRequestPing})
+	if err == nil || err.Error() != "boom" {
+		t.Fatalf("request() error = %v, want boom", err)
+	}
+	<-done
 }

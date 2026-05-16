@@ -113,6 +113,23 @@ func TestCreateProxyDialerCommandReturnsContextDialer(t *testing.T) {
 	}
 }
 
+func TestCreateProxyDialerUnsupportedTypeReturnsEmptyContextDialer(t *testing.T) {
+	p := &Proxy{Type: "unsupported"}
+
+	dialer, err := p.CreateProxyDialer()
+	if err != nil {
+		t.Fatalf("CreateProxyDialer() error = %v", err)
+	}
+
+	ctxDialer, ok := dialer.(*ContextDialer)
+	if !ok {
+		t.Fatalf("CreateProxyDialer() type = %T, want *ContextDialer", dialer)
+	}
+	if ctxDialer.GetDialer() != nil {
+		t.Fatalf("CreateProxyDialer() inner dialer = %T, want nil", ctxDialer.GetDialer())
+	}
+}
+
 func TestConnectSshAgentFallsBackToKeyring(t *testing.T) {
 	oldSock, hadSock := os.LookupEnv("SSH_AUTH_SOCK")
 	if err := os.Setenv("SSH_AUTH_SOCK", "/path/that/does/not/exist.sock"); err != nil {

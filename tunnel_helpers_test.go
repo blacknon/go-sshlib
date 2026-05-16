@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net"
 	"syscall"
 	"testing"
 
@@ -54,6 +55,25 @@ type errWriter struct {
 
 func (w *errWriter) Write(p []byte) (int, error) {
 	return 0, w.err
+}
+
+type recordingWriteCloser struct {
+	bytes.Buffer
+	closeCount int
+}
+
+func (w *recordingWriteCloser) Close() error {
+	w.closeCount++
+	return nil
+}
+
+type recordingCloser struct {
+	closeCount int
+}
+
+func (c *recordingCloser) Close() error {
+	c.closeCount++
+	return nil
 }
 
 func TestTunnelFinishOnlyOnce(t *testing.T) {
@@ -180,5 +200,114 @@ func TestShouldRetryTunnelCopyErrorAdditionalCases(t *testing.T) {
 	}
 	if shouldRetryTunnelCopyError(io.EOF) {
 		t.Fatal("shouldRetryTunnelCopyError(io.EOF) = true, want false")
+	}
+}
+
+func TestReadClientStreamWritesPayloadAndClosesStdin(t *testing.T) {
+	client, server := net.Pipe()
+	defer client.Close()
+
+	stdin := &recordingWriteCloser{}
+	done := make(chan struct{})
+	go func() {
+		readClientStream(client, stdin, nil)
+		close(done)
+	}()
+
+	if err := writeStreamFrame(server, streamFrameStdin, []byte("packet")); err != nil {
+		t.Fatalf("write stdin frame error = %v", err)
+	}
+	if err := writeStreamFrame(server, streamFrameCloseStdin, nil); err != nil {
+		t.Fatalf("write close frame error = %v", err)
+	}
+	_ = server.Close()
+	<-done
+
+	if got := stdin.String(); got != "packet" {
+		t.Fatalf("stdin payload = %q, want %q", got, "packet")
+	}
+	if stdin.closeCount != 1 {
+		t.Fatalf("stdin closeCount = %d, want 1", stdin.closeCount)
+	}
+}
+
+func TestReadClientStreamIgnoresMalformedWindowChangePayload(t *testing.T) {
+	client, server := net.Pipe()
+	defer client.Close()
+
+	stdin := &recordingWriteCloser{}
+	done := make(chan struct{})
+	go func() {
+		readClientStream(client, stdin, nil)
+		close(done)
+	}()
+
+	if err := writeStreamFrame(server, streamFrameWindowChange, []byte{1, 2, 3}); err != nil {
+		t.Fatalf("write malformed window frame error = %v", err)
+	}
+	if err := writeStreamFrame(server, streamFrameCloseStdin, nil); err != nil {
+		t.Fatalf("write close frame error = %v", err)
+	}
+	_ = server.Close()
+	<-done
+
+	if stdin.closeCount != 1 {
+		t.Fatalf("stdin closeCount = %d, want 1", stdin.closeCount)
+	}
+}
+
+func TestReadControlTunnelStreamWritesPayloadAndClosesDst(t *testing.T) {
+	client, server := net.Pipe()
+	defer client.Close()
+
+	dst := &recordingWriteCloser{}
+	closer := &recordingCloser{}
+	done := make(chan struct{})
+	go func() {
+		readControlTunnelStream(client, dst, closer)
+		close(done)
+	}()
+
+	if err := writeStreamFrame(server, streamFrameStdin, []byte("payload")); err != nil {
+		t.Fatalf("write stdin frame error = %v", err)
+	}
+	if err := writeStreamFrame(server, streamFrameCloseStdin, nil); err != nil {
+		t.Fatalf("write close frame error = %v", err)
+	}
+	_ = server.Close()
+	<-done
+
+	if got := dst.String(); got != "payload" {
+		t.Fatalf("dst payload = %q, want %q", got, "payload")
+	}
+	if dst.closeCount != 1 {
+		t.Fatalf("dst closeCount = %d, want 1", dst.closeCount)
+	}
+	if closer.closeCount != 0 {
+		t.Fatalf("closer closeCount = %d, want 0", closer.closeCount)
+	}
+}
+
+func TestReadControlTunnelStreamClosesCloserOnMalformedFrame(t *testing.T) {
+	client, server := net.Pipe()
+	defer client.Close()
+
+	dst := &recordingWriteCloser{}
+	closer := &recordingCloser{}
+	done := make(chan struct{})
+	go func() {
+		readControlTunnelStream(client, dst, closer)
+		close(done)
+	}()
+
+	_, _ = server.Write([]byte{streamFrameStdin, 0, 0, 0, 5, 'x'})
+	_ = server.Close()
+	<-done
+
+	if dst.closeCount != 1 {
+		t.Fatalf("dst closeCount = %d, want 1", dst.closeCount)
+	}
+	if closer.closeCount != 1 {
+		t.Fatalf("closer closeCount = %d, want 1", closer.closeCount)
 	}
 }

@@ -160,6 +160,42 @@ func TestLookupControlPersistAuthMethodUnknown(t *testing.T) {
 	}
 }
 
+func TestValidateControlPersistAuthDefinitionsMissingFields(t *testing.T) {
+	tests := []struct {
+		name string
+		defs []controlPersistAuthMethodDefinition
+		want string
+	}{
+		{
+			name: "password requires value",
+			defs: []controlPersistAuthMethodDefinition{{Type: "password"}},
+			want: "password auth requires Password",
+		},
+		{
+			name: "publickey requires key path",
+			defs: []controlPersistAuthMethodDefinition{{Type: "publickey"}},
+			want: "publickey auth requires KeyPath",
+		},
+		{
+			name: "pkcs11 requires provider",
+			defs: []controlPersistAuthMethodDefinition{{Type: "pkcs11"}},
+			want: "pkcs11 auth requires PKCS11Provider",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateControlPersistAuthDefinitions(tt.defs)
+			if err == nil {
+				t.Fatal("validateControlPersistAuthDefinitions() error = nil, want non-nil")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("validateControlPersistAuthDefinitions() error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func writeTempPrivateKey(t *testing.T) string {
 	t.Helper()
 

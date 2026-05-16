@@ -10,6 +10,26 @@ import (
 	"testing"
 )
 
+type stubWriteCloser struct {
+	closeCount int
+}
+
+func (s *stubWriteCloser) Write(p []byte) (int, error) { return len(p), nil }
+func (s *stubWriteCloser) Close() error {
+	s.closeCount++
+	return nil
+}
+
+type stubConn struct {
+	net.Conn
+	closeCount int
+}
+
+func (c *stubConn) Close() error {
+	c.closeCount++
+	return nil
+}
+
 func TestControlTerminalStdinWriteAndClose(t *testing.T) {
 	var buf bytes.Buffer
 	stdin := &controlTerminalStdin{writer: &lockedFrameWriter{w: &buf}}
@@ -72,10 +92,57 @@ func TestTerminalResizeWritesWindowChangeFrame(t *testing.T) {
 	}
 }
 
+func TestTerminalResizeUsesDefaultDimensionsForNonPositiveValues(t *testing.T) {
+	var buf bytes.Buffer
+	tm := &Terminal{writer: &lockedFrameWriter{w: &buf}}
+
+	if err := tm.Resize(0, -1); err != nil {
+		t.Fatalf("Resize() error = %v", err)
+	}
+
+	frameType, payload, err := readStreamFrame(&buf)
+	if err != nil {
+		t.Fatalf("readStreamFrame() error = %v", err)
+	}
+	if frameType != streamFrameWindowChange {
+		t.Fatalf("frameType = %d, want %d", frameType, streamFrameWindowChange)
+	}
+	if got := binary.BigEndian.Uint32(payload[:4]); got != 80 {
+		t.Fatalf("cols = %d, want 80", got)
+	}
+	if got := binary.BigEndian.Uint32(payload[4:]); got != 24 {
+		t.Fatalf("rows = %d, want 24", got)
+	}
+}
+
 func TestTerminalWaitNil(t *testing.T) {
 	var tm *Terminal
 	if err := tm.Wait(); err == nil {
 		t.Fatal("Wait() error = nil, want non-nil")
+	}
+}
+
+func TestOpenTerminalRejectsConflictingOptions(t *testing.T) {
+	c := &Connect{}
+
+	_, err := c.OpenTerminal(TerminalOptions{
+		StartShell: true,
+		Command:    "echo hi",
+	})
+	if err == nil {
+		t.Fatal("OpenTerminal() error = nil, want non-nil")
+	}
+}
+
+func TestOpenControlTerminalRequiresShellOrCommand(t *testing.T) {
+	c := &Connect{
+		ControlMaster: "auto",
+		controlClient: &controlClient{},
+	}
+
+	_, err := c.openControlTerminal(TerminalOptions{})
+	if err == nil {
+		t.Fatal("openControlTerminal() error = nil, want non-nil")
 	}
 }
 
@@ -169,5 +236,34 @@ func TestTerminalCopyControlOutputNonZeroExit(t *testing.T) {
 	var exitErr *controlExitError
 	if !errors.As(err, &exitErr) || exitErr.status != 23 {
 		t.Fatalf("Wait() error = %v, want controlExitError status 23", err)
+	}
+}
+
+func TestTerminalCloseIdempotent(t *testing.T) {
+	stdin := &stubWriteCloser{}
+	conn := &stubConn{}
+	tm := &Terminal{
+		Stdin: stdin,
+		conn:  conn,
+	}
+
+	if err := tm.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if err := tm.Close(); err != nil {
+		t.Fatalf("second Close() error = %v", err)
+	}
+	if stdin.closeCount != 1 {
+		t.Fatalf("stdin closeCount = %d, want 1", stdin.closeCount)
+	}
+	if conn.closeCount != 1 {
+		t.Fatalf("conn closeCount = %d, want 1", conn.closeCount)
+	}
+}
+
+func TestTerminalCloseNilIsSafe(t *testing.T) {
+	var tm *Terminal
+	if err := tm.Close(); err != nil {
+		t.Fatalf("Close() error = %v, want nil", err)
 	}
 }
