@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -48,7 +49,14 @@ func TestSetLogWithRemoveAnsiCodeConfiguresLogging(t *testing.T) {
 }
 
 func TestLogWritersWritesToOriginalOutputsAndLogFile(t *testing.T) {
-	logPath := t.TempDir() + "/ssh.log"
+	logFile, err := os.CreateTemp("", "go-sshlib-log-*.log")
+	if err != nil {
+		t.Fatalf("CreateTemp() error = %v", err)
+	}
+	logPath := logFile.Name()
+	if err := logFile.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
 	c := &Connect{logFile: logPath}
 
 	var stdout bytes.Buffer
@@ -80,6 +88,10 @@ func TestLogWritersWritesToOriginalOutputsAndLogFile(t *testing.T) {
 	logText := string(data)
 	if !strings.Contains(logText, "hello stdout\n") || !strings.Contains(logText, "hello stderr\n") {
 		t.Fatalf("log file missing expected output: %q", logText)
+	}
+
+	if filepath.Dir(logPath) == "" {
+		t.Fatalf("unexpected empty log file directory for %q", logPath)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -59,6 +60,10 @@ func TestX11ConnectForwardedDisplayUsesTCP(t *testing.T) {
 }
 
 func TestX11ConnectPathDisplayUsesUnixSocket(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix domain sockets are not used for X11 paths on Windows")
+	}
+
 	socketPath := filepath.Join("/tmp", "sshlib-x11-path.sock")
 	_ = os.Remove(socketPath)
 	listener, err := net.Listen("unix", socketPath)
@@ -93,6 +98,10 @@ func TestX11ConnectPathDisplayUsesUnixSocket(t *testing.T) {
 }
 
 func TestX11ConnectUnixDisplayUsesDefaultSocketPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix display sockets are not available on Windows")
+	}
+
 	dir := "/tmp/.X11-unix"
 	if err := os.MkdirAll(dir, 0o777); err != nil {
 		t.Fatalf("MkdirAll() error = %v", err)

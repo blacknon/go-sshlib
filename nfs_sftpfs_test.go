@@ -3,6 +3,7 @@ package sshlib
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -59,7 +60,8 @@ func TestNewChangeSFTPFSImplementsBillyChange(t *testing.T) {
 }
 
 func TestChangeChrootFSChangePath(t *testing.T) {
-	fs := &changeChrootFS{root: "/srv/share"}
+	root := filepath.Clean(filepath.Join(string(filepath.Separator), "srv", "share"))
+	fs := &changeChrootFS{root: root}
 
 	tests := []struct {
 		name    string
@@ -67,10 +69,10 @@ func TestChangeChrootFSChangePath(t *testing.T) {
 		want    string
 		wantErr error
 	}{
-		{name: "dot maps to root", input: ".", want: "/srv/share"},
-		{name: "slash maps to root", input: "/", want: "/srv/share"},
-		{name: "relative path joins root", input: "nested/file.txt", want: "/srv/share/nested/file.txt"},
-		{name: "leading slash is trimmed", input: "/nested/file.txt", want: "/srv/share/nested/file.txt"},
+		{name: "dot maps to root", input: ".", want: root},
+		{name: "slash maps to root", input: "/", want: root},
+		{name: "relative path joins root", input: "nested/file.txt", want: filepath.Join(root, "nested", "file.txt")},
+		{name: "leading slash is trimmed", input: "/nested/file.txt", want: filepath.Join(root, "nested", "file.txt")},
 		{name: "cross boundary is rejected", input: "../outside", wantErr: billy.ErrCrossedBoundary},
 	}
 
@@ -89,14 +91,16 @@ func TestChangeChrootFSChangePath(t *testing.T) {
 
 func TestChangeChrootFSForwardsChmod(t *testing.T) {
 	change := &recordingChangeFS{}
-	fs := &changeChrootFS{root: "/srv/share", change: change}
+	root := filepath.Clean(filepath.Join(string(filepath.Separator), "srv", "share"))
+	fs := &changeChrootFS{root: root, change: change}
 
 	if err := fs.Chmod("nested/file.txt", 0o640); err != nil {
 		t.Fatalf("Chmod() error = %v", err)
 	}
 
-	if change.chmodName != "/srv/share/nested/file.txt" {
-		t.Fatalf("Chmod() forwarded path = %q, want %q", change.chmodName, "/srv/share/nested/file.txt")
+	want := filepath.Join(root, "nested", "file.txt")
+	if change.chmodName != want {
+		t.Fatalf("Chmod() forwarded path = %q, want %q", change.chmodName, want)
 	}
 	if change.chmodMode != 0o640 {
 		t.Fatalf("Chmod() forwarded mode = %#o, want %#o", change.chmodMode, 0o640)
@@ -105,7 +109,8 @@ func TestChangeChrootFSForwardsChmod(t *testing.T) {
 
 func TestChangeChrootFSForwardsOwnershipAndTimes(t *testing.T) {
 	change := &recordingChangeFS{}
-	fs := &changeChrootFS{root: "/srv/share", change: change}
+	root := filepath.Clean(filepath.Join(string(filepath.Separator), "srv", "share"))
+	fs := &changeChrootFS{root: root, change: change}
 	atime := time.Unix(100, 0)
 	mtime := time.Unix(200, 0)
 
@@ -119,20 +124,21 @@ func TestChangeChrootFSForwardsOwnershipAndTimes(t *testing.T) {
 		t.Fatalf("Chtimes() error = %v", err)
 	}
 
-	if change.chownName != "/srv/share/file.txt" || change.chownUID != 1000 || change.chownGID != 1001 {
+	if change.chownName != filepath.Join(root, "file.txt") || change.chownUID != 1000 || change.chownGID != 1001 {
 		t.Fatalf("Chown() forwarded unexpected values: path=%q uid=%d gid=%d", change.chownName, change.chownUID, change.chownGID)
 	}
-	if change.lchownName != "/srv/share/link.txt" || change.lchownUID != 2000 || change.lchownGID != 2001 {
+	if change.lchownName != filepath.Join(root, "link.txt") || change.lchownUID != 2000 || change.lchownGID != 2001 {
 		t.Fatalf("Lchown() forwarded unexpected values: path=%q uid=%d gid=%d", change.lchownName, change.lchownUID, change.lchownGID)
 	}
-	if change.chtimesName != "/srv/share/time.txt" || !change.atime.Equal(atime) || !change.mtime.Equal(mtime) {
+	if change.chtimesName != filepath.Join(root, "time.txt") || !change.atime.Equal(atime) || !change.mtime.Equal(mtime) {
 		t.Fatalf("Chtimes() forwarded unexpected values: path=%q atime=%v mtime=%v", change.chtimesName, change.atime, change.mtime)
 	}
 }
 
 func TestChangeChrootFSRejectsCrossBoundaryChanges(t *testing.T) {
 	change := &recordingChangeFS{}
-	fs := &changeChrootFS{root: "/srv/share", change: change}
+	root := filepath.Clean(filepath.Join(string(filepath.Separator), "srv", "share"))
+	fs := &changeChrootFS{root: root, change: change}
 
 	err := fs.Chmod("../outside", 0o644)
 	if !errors.Is(err, billy.ErrCrossedBoundary) {
