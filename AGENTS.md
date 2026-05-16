@@ -24,9 +24,13 @@ AGENTS.md
 
 - ユーザー向け挙動、CLI オプション、設定方法、インストール手順を変えた場合は、対応する README / docs も更新してください。
 
+---
+
 ## 補足
 
-### NFS / lsshfs compatibility patch
+### 注意事項
+
+#### NFS / lsshfs compatibility patch
 
 このリポジトリでは、`lsshfs` を macOS 上で NFS backend として利用した際に発生する以下の問題を回避するため、`go-nfs` と `go-billy` を `internal/third_party` 配下でローカル管理している。
 
@@ -36,7 +40,7 @@ AGENTS.md
 - `Error applying attributes: Operation not supported: permission denied`
 - mount 先に不要な一時ファイルや 0 byte ファイルが残ることがある
 
-#### 現在の依存構成
+##### 現在の依存構成
 
 `go.mod` では以下の `replace` を使っている。
 
@@ -45,9 +49,10 @@ AGENTS.md
 
 この構成は意図的なものであり、安易に upstream 版へ戻してはいけない。
 
-#### 具体的な修正内容
+##### 具体的な修正内容
 
-##### 1. `nfs_sftpfs.go`
+###### 1. `nfs_sftpfs.go`
+
 `NewChangeSFTPFS()` の返り値を、単純な `temporal.New(chroot.New(...))` ではなく、`billy.Change` を維持する wrapper に変更している。
 
 変更意図:
@@ -65,7 +70,8 @@ AGENTS.md
 
 これらは `sftp.Client` へ forward する。
 
-##### 2. `internal/third_party/github.com/willscott/go-nfs/nfs_oncreate.go`
+###### 2. `internal/third_party/github.com/willscott/go-nfs/nfs_oncreate.go`
+
 `CREATE_EXCLUSIVE` を即 `NFSStatusNotSupp` で失敗させないようにしている。
 
 変更意図:
@@ -76,11 +82,12 @@ AGENTS.md
 
 さらに、attribute apply に失敗した場合は、作りかけファイルを `Remove()` して cleanup するようにしている。
 
-##### 3. `internal/third_party/github.com/go-git/go-billy/v5`
+###### 3. `internal/third_party/github.com/go-git/go-billy/v5`
+
 このディレクトリは `replace` 先として内部保持している。
 現時点では `go-sshlib` 側の wrapper で `Change` 問題を吸収しているが、依存整合性と将来の patch 管理のため、`go-billy` も `internal/third_party` 側で固定している。
 
-#### 重要な注意
+##### 重要な注意
 
 以下は勝手に変更しないこと。
 
@@ -97,7 +104,7 @@ AGENTS.md
 - attribute apply エラー
 - macOS 上での不安定な file operation
 
-#### 変更時のルール
+##### 変更時のルール
 
 この周辺を変更する場合は、少なくとも以下を確認すること。
 
