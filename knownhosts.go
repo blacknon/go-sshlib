@@ -7,6 +7,7 @@ package sshlib
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
@@ -30,6 +31,22 @@ type OverwriteInventory struct {
 	RemoteAddr  string
 	Fingerprint string
 	OldKeyText  string
+}
+
+var knownHostsPromptInput io.Reader = os.Stdin
+var knownHostsPromptOutput io.Writer = os.Stdout
+var startKnownHostsSignalWatcher = func(stopC <-chan struct{}) {
+	go func() {
+		sigC := make(chan os.Signal, 1)
+		signal.Notify(sigC, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+		defer signal.Stop(sigC)
+
+		select {
+		case <-sigC:
+			os.Exit(1)
+		case <-stopC:
+		}
+	}()
 }
 
 // verifyAndAppendNew checks knownhosts from the files stored in c.KnownHostsFiles.
@@ -122,48 +139,7 @@ func (c *Connect) VerifyAndAppendNew(hostname string, remote net.Addr, key ssh.P
 func askAddingUnknownHostKey(text string, address string, remote net.Addr, key ssh.PublicKey) (bool, error) {
 	// set template variable
 	sweaters := WriteInventory{address, remote.String(), ssh.FingerprintSHA256(key)}
-
-	// set template
-	tmpl, err := template.New("test").Parse(text)
-	if err != nil {
-		return false, err
-	}
-
-	//
-	stopC := make(chan struct{})
-	defer func() {
-		close(stopC)
-	}()
-
-	go func() {
-		sigC := make(chan os.Signal, 1)
-		signal.Notify(sigC, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-		select {
-		case <-sigC:
-			os.Exit(1)
-		case <-stopC:
-		}
-	}()
-
-	err = tmpl.Execute(os.Stdout, sweaters)
-	if err != nil {
-		return false, err
-	}
-
-	b := bufio.NewReader(os.Stdin)
-	for {
-		answer, err := b.ReadString('\n')
-		if err != nil {
-			return false, fmt.Errorf("failed to read answer: %s", err)
-		}
-		answer = string(strings.ToLower(strings.TrimSpace(answer)))
-		if slices.Contains([]string{"yes", "y"}, answer) {
-			return true, nil
-		} else if slices.Contains([]string{"no", "n"}, answer) {
-			return false, nil
-		}
-		fmt.Print("Please type 'yes' or 'no': ")
-	}
+	return promptKnownHost(text, sweaters, knownHostsPromptInput, knownHostsPromptOutput, []string{"yes", "y"}, []string{"no", "n"}, "Please type 'yes' or 'no': ")
 }
 
 // askOverwriteKnownHostKey
@@ -172,46 +148,38 @@ func askOverwriteKnownHostKey(text string, address string, remote net.Addr, key 
 	// set template variable
 	sweaters := OverwriteInventory{address, remote.String(), ssh.FingerprintSHA256(key), oldkey}
 
+	return promptKnownHost(text, sweaters, knownHostsPromptInput, knownHostsPromptOutput, []string{"yes", "y"}, []string{"no", "n"}, "Please type 'yes|y' or 'no|n': ")
+}
+
+func promptKnownHost(text string, inventory any, input io.Reader, output io.Writer, yesAnswers, noAnswers []string, retryPrompt string) (bool, error) {
 	// set template
 	tmpl, err := template.New("test").Parse(text)
 	if err != nil {
 		return false, err
 	}
 
-	//
 	stopC := make(chan struct{})
-	defer func() {
-		close(stopC)
-	}()
+	defer close(stopC)
+	startKnownHostsSignalWatcher(stopC)
 
-	go func() {
-		sigC := make(chan os.Signal, 1)
-		signal.Notify(sigC, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-		select {
-		case <-sigC:
-			os.Exit(1)
-		case <-stopC:
-		}
-	}()
-
-	err = tmpl.Execute(os.Stdout, sweaters)
+	err = tmpl.Execute(output, inventory)
 	if err != nil {
 		return false, err
 	}
 
-	b := bufio.NewReader(os.Stdin)
+	b := bufio.NewReader(input)
 	for {
 		answer, err := b.ReadString('\n')
 		if err != nil {
 			return false, fmt.Errorf("failed to read answer: %s", err)
 		}
 		answer = string(strings.ToLower(strings.TrimSpace(answer)))
-		if answer == "yes" {
+		if slices.Contains(yesAnswers, answer) {
 			return true, nil
-		} else if answer == "no" {
+		} else if slices.Contains(noAnswers, answer) {
 			return false, nil
 		}
-		fmt.Print("Please type 'yes|y' or 'no|n': ")
+		fmt.Fprint(output, retryPrompt)
 	}
 }
 

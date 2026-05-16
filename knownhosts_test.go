@@ -1,6 +1,7 @@
 package sshlib
 
 import (
+	"bytes"
 	"net"
 	"os"
 	"path/filepath"
@@ -89,5 +90,69 @@ func TestWriteKnownHostsKeyUsesSingleAddressWhenRemoteMatchesHostname(t *testing
 	want := knownhosts.Line([]string{"example.com"}, key)
 	if text != want {
 		t.Fatalf("known_hosts entry = %q, want %q", text, want)
+	}
+}
+
+func TestAskAddingUnknownHostKeyAcceptsShortYesAfterRetry(t *testing.T) {
+	key := testPublicKey(t)
+	remote := staticAddr{network: "tcp", address: "127.0.0.1:22"}
+
+	oldInput := knownHostsPromptInput
+	oldOutput := knownHostsPromptOutput
+	oldWatcher := startKnownHostsSignalWatcher
+	defer func() {
+		knownHostsPromptInput = oldInput
+		knownHostsPromptOutput = oldOutput
+		startKnownHostsSignalWatcher = oldWatcher
+	}()
+
+	var output bytes.Buffer
+	knownHostsPromptInput = strings.NewReader("maybe\ny\n")
+	knownHostsPromptOutput = &output
+	startKnownHostsSignalWatcher = func(stopC <-chan struct{}) {}
+
+	ok, err := askAddingUnknownHostKey("Host {{.Address}} {{.Fingerprint}}? ", "example.com", remote, key)
+	if err != nil {
+		t.Fatalf("askAddingUnknownHostKey() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("askAddingUnknownHostKey() = false, want true")
+	}
+	text := output.String()
+	if !strings.Contains(text, "Host example.com ") {
+		t.Fatalf("prompt output = %q, want rendered template", text)
+	}
+	if !strings.Contains(text, "Please type 'yes' or 'no': ") {
+		t.Fatalf("prompt output = %q, want retry prompt", text)
+	}
+}
+
+func TestAskOverwriteKnownHostKeyRejectsNo(t *testing.T) {
+	key := testPublicKey(t)
+	remote := staticAddr{network: "tcp", address: "127.0.0.1:22"}
+
+	oldInput := knownHostsPromptInput
+	oldOutput := knownHostsPromptOutput
+	oldWatcher := startKnownHostsSignalWatcher
+	defer func() {
+		knownHostsPromptInput = oldInput
+		knownHostsPromptOutput = oldOutput
+		startKnownHostsSignalWatcher = oldWatcher
+	}()
+
+	var output bytes.Buffer
+	knownHostsPromptInput = strings.NewReader("n\n")
+	knownHostsPromptOutput = &output
+	startKnownHostsSignalWatcher = func(stopC <-chan struct{}) {}
+
+	ok, err := askOverwriteKnownHostKey("Old={{.OldKeyText}} ", "example.com", remote, key, "old-key")
+	if err != nil {
+		t.Fatalf("askOverwriteKnownHostKey() error = %v", err)
+	}
+	if ok {
+		t.Fatal("askOverwriteKnownHostKey() = true, want false")
+	}
+	if !strings.Contains(output.String(), "Old=old-key") {
+		t.Fatalf("prompt output = %q, want old key text", output.String())
 	}
 }
