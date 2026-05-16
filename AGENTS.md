@@ -88,7 +88,7 @@ AGENTS.md
 - `internal/third_party` 配下の削除
 - upstream 版への安易な差し戻し
 - `nfs_sftpfs.go` の `changeChrootFS` wrapper の除去
-- `nfs_oncreate.go` の `exclusive create` 回避処理の除去
+- `internal/third_party/github.com/willscott/go-nfs/nfs_oncreate.go` の `exclusive create` 回避処理の除去
 
 これらを戻すと、`lsshfs` で以下の不具合が再発する可能性が高い。
 

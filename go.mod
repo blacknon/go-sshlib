@@ -18,7 +18,7 @@ require (
 	github.com/absfs/absfs v1.0.0
 	github.com/absfs/smbfs v0.9.1
 	github.com/go-git/go-billy/v5 v5.8.0
-	github.com/hanwen/go-fuse/v2 v2.9.0
+	github.com/hanwen/go-fuse/v2 v2.10.1
 	github.com/pkg/sftp v1.13.10
 	github.com/willscott/go-nfs v0.0.3
 )
