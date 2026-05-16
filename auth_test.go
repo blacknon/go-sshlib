@@ -132,6 +132,34 @@ func TestCreateControlPersistAuthMethodsRemovesTransientKeyFile(t *testing.T) {
 	}
 }
 
+func TestCleanupControlPersistTransientFilesRemovesDuplicates(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "transient-key")
+	if err := os.WriteFile(path, []byte("secret"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() error = %v", err)
+	}
+
+	cleanupControlPersistTransientFiles([]string{path, path, ""})
+
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("transient file still exists: stat err = %v", err)
+	}
+}
+
+func TestControlPersistAuthMethodKeyNil(t *testing.T) {
+	key, ok := controlPersistAuthMethodKey(nil)
+	if ok {
+		t.Fatalf("controlPersistAuthMethodKey(nil) = %#v, true; want false", key)
+	}
+}
+
+func TestLookupControlPersistAuthMethodUnknown(t *testing.T) {
+	auth := ssh.Password("secret")
+	if _, ok := lookupControlPersistAuthMethod(auth); ok {
+		t.Fatal("lookupControlPersistAuthMethod() unexpectedly found unregistered auth method")
+	}
+}
+
 func writeTempPrivateKey(t *testing.T) string {
 	t.Helper()
 
