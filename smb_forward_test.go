@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,8 +15,70 @@ func TestDefaultSMBShareName(t *testing.T) {
 	if got := defaultSMBShareName(""); got != "share" {
 		t.Fatalf("defaultSMBShareName(\"\") = %q, want %q", got, "share")
 	}
+	if got := defaultSMBShareName("   "); got != "share" {
+		t.Fatalf("defaultSMBShareName(\"   \") = %q, want %q", got, "share")
+	}
 	if got := defaultSMBShareName("docs"); got != "docs" {
 		t.Fatalf("defaultSMBShareName(\"docs\") = %q, want %q", got, "docs")
+	}
+}
+
+func TestAbsCleanPath(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		cwd  string
+		want string
+	}{
+		{name: "empty path uses cwd", path: "", cwd: "/work", want: "/work"},
+		{name: "relative path joins cwd", path: "dir/file.txt", cwd: "/work", want: "/work/dir/file.txt"},
+		{name: "parent segments are cleaned", path: "../other/file.txt", cwd: "/work/base", want: "/work/other/file.txt"},
+		{name: "absolute path is preserved", path: "/var/data", cwd: "/work", want: "/var/data"},
+		{name: "windows separators are normalized", path: `dir\sub\file.txt`, cwd: "/work", want: "/work/dir/sub/file.txt"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := absCleanPath(tt.path, tt.cwd); got != tt.want {
+				t.Fatalf("absCleanPath(%q, %q) = %q, want %q", tt.path, tt.cwd, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBillyPathAndPathHelpers(t *testing.T) {
+	if got := billyPath("/"); got != "." {
+		t.Fatalf("billyPath(\"/\") = %q, want %q", got, ".")
+	}
+	if got := billyPath("/dir/file.txt"); got != "dir/file.txt" {
+		t.Fatalf("billyPath(\"/dir/file.txt\") = %q, want %q", got, "dir/file.txt")
+	}
+	if got := pathClean("/dir/./nested/../file.txt"); got != "/dir/file.txt" {
+		t.Fatalf("pathClean() = %q, want %q", got, "/dir/file.txt")
+	}
+	if got := pathJoin("/dir", "nested", "..", "file.txt"); got != "/dir/file.txt" {
+		t.Fatalf("pathJoin() = %q, want %q", got, "/dir/file.txt")
+	}
+}
+
+func TestGetRemoteAbsPath(t *testing.T) {
+	tests := []struct {
+		name string
+		wd   string
+		path string
+		want string
+	}{
+		{name: "tilde expands to home", wd: "/home/test", path: "~/repo", want: "/home/test/repo"},
+		{name: "relative path joins home", wd: "/home/test", path: "repo", want: "/home/test/repo"},
+		{name: "absolute path stays absolute", wd: "/home/test", path: "/srv/share", want: "/srv/share"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getRemoteAbsPath(tt.wd, tt.path); got != tt.want {
+				t.Fatalf("getRemoteAbsPath(%q, %q) = %q, want %q", tt.wd, tt.path, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -68,6 +131,29 @@ func TestAbsBillyFileWriteAtFallback(t *testing.T) {
 	}
 	if string(file.data) != "hello world" {
 		t.Fatalf("unexpected data: got %q want %q", string(file.data), "hello world")
+	}
+}
+
+func TestAbsBillyFSChdirAndGetwd(t *testing.T) {
+	bfs := memfs.New()
+	if err := bfs.MkdirAll("dir/sub", 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	afs := newAbsBillyFS(bfs).(*absBillyFS)
+	if err := afs.Chdir("dir/sub"); err != nil {
+		t.Fatalf("Chdir() error = %v", err)
+	}
+
+	wd, err := afs.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd() error = %v", err)
+	}
+	if wd != "/dir/sub" {
+		t.Fatalf("Getwd() = %q, want %q", wd, "/dir/sub")
+	}
+	if got := afs.clean("../file.txt"); got != filepath.ToSlash("dir/file.txt") {
+		t.Fatalf("clean() = %q, want %q", got, "dir/file.txt")
 	}
 }
 

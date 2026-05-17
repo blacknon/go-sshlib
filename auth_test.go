@@ -132,6 +132,70 @@ func TestCreateControlPersistAuthMethodsRemovesTransientKeyFile(t *testing.T) {
 	}
 }
 
+func TestCleanupControlPersistTransientFilesRemovesDuplicates(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "transient-key")
+	if err := os.WriteFile(path, []byte("secret"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() error = %v", err)
+	}
+
+	cleanupControlPersistTransientFiles([]string{path, path, ""})
+
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("transient file still exists: stat err = %v", err)
+	}
+}
+
+func TestControlPersistAuthMethodKeyNil(t *testing.T) {
+	key, ok := controlPersistAuthMethodKey(nil)
+	if ok {
+		t.Fatalf("controlPersistAuthMethodKey(nil) = %#v, true; want false", key)
+	}
+}
+
+func TestLookupControlPersistAuthMethodUnknown(t *testing.T) {
+	auth := ssh.Password("secret")
+	if _, ok := lookupControlPersistAuthMethod(auth); ok {
+		t.Fatal("lookupControlPersistAuthMethod() unexpectedly found unregistered auth method")
+	}
+}
+
+func TestValidateControlPersistAuthDefinitionsMissingFields(t *testing.T) {
+	tests := []struct {
+		name string
+		defs []controlPersistAuthMethodDefinition
+		want string
+	}{
+		{
+			name: "password requires value",
+			defs: []controlPersistAuthMethodDefinition{{Type: "password"}},
+			want: "password auth requires Password",
+		},
+		{
+			name: "publickey requires key path",
+			defs: []controlPersistAuthMethodDefinition{{Type: "publickey"}},
+			want: "publickey auth requires KeyPath",
+		},
+		{
+			name: "pkcs11 requires provider",
+			defs: []controlPersistAuthMethodDefinition{{Type: "pkcs11"}},
+			want: "pkcs11 auth requires PKCS11Provider",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateControlPersistAuthDefinitions(tt.defs)
+			if err == nil {
+				t.Fatal("validateControlPersistAuthDefinitions() error = nil, want non-nil")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("validateControlPersistAuthDefinitions() error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func writeTempPrivateKey(t *testing.T) string {
 	t.Helper()
 

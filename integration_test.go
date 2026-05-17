@@ -91,6 +91,82 @@ func TestAutoReconnectCreateSessionWithDockerSSHD(t *testing.T) {
 	}
 }
 
+func TestAutoReconnectCommandWithDockerSSHD(t *testing.T) {
+	if os.Getenv("SSHLIB_INTEGRATION") == "" {
+		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
+	}
+
+	host := getenvDefault("SSHLIB_TEST_HOST", "127.0.0.1")
+	port := getenvDefault("SSHLIB_TEST_PORT", "2222")
+	user := getenvDefault("SSHLIB_TEST_USER", "testuser")
+	password := getenvDefault("SSHLIB_TEST_PASSWORD", "testpass")
+
+	con := &Connect{
+		AutoReconnect: true,
+	}
+
+	authMethod := CreateAuthMethodPassword(password)
+	if err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod}); err != nil {
+		t.Fatalf("CreateClient() error = %v", err)
+	}
+	defer con.Close()
+
+	if err := con.Client.Close(); err != nil {
+		t.Fatalf("Client.Close() error = %v", err)
+	}
+	con.Client = nil
+
+	var stdout bytes.Buffer
+	con.Stdout = &stdout
+	if err := con.Command("printf command-reconnected"); err != nil {
+		t.Fatalf("Command() after reconnect error = %v", err)
+	}
+
+	if got := stdout.String(); got != "command-reconnected" {
+		t.Fatalf("unexpected output: got %q want %q", got, "command-reconnected")
+	}
+}
+
+func TestAutoReconnectSFTPClientWithDockerSSHD(t *testing.T) {
+	if os.Getenv("SSHLIB_INTEGRATION") == "" {
+		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
+	}
+
+	host := getenvDefault("SSHLIB_TEST_HOST", "127.0.0.1")
+	port := getenvDefault("SSHLIB_TEST_PORT", "2222")
+	user := getenvDefault("SSHLIB_TEST_USER", "testuser")
+	password := getenvDefault("SSHLIB_TEST_PASSWORD", "testpass")
+
+	con := &Connect{
+		AutoReconnect: true,
+	}
+
+	authMethod := CreateAuthMethodPassword(password)
+	if err := con.CreateClient(host, port, user, []ssh.AuthMethod{authMethod}); err != nil {
+		t.Fatalf("CreateClient() error = %v", err)
+	}
+	defer con.Close()
+
+	if err := con.Client.Close(); err != nil {
+		t.Fatalf("Client.Close() error = %v", err)
+	}
+	con.Client = nil
+
+	client, err := con.newSFTPClient()
+	if err != nil {
+		t.Fatalf("newSFTPClient() after reconnect error = %v", err)
+	}
+	defer client.Close()
+
+	path, err := client.RealPath(".")
+	if err != nil {
+		t.Fatalf("RealPath(.) error = %v", err)
+	}
+	if path == "" {
+		t.Fatal("RealPath(.) = empty path, want non-empty path")
+	}
+}
+
 func TestControlMasterCommandWithDockerSSHD(t *testing.T) {
 	if os.Getenv("SSHLIB_INTEGRATION") == "" {
 		t.Skip("set SSHLIB_INTEGRATION=1 to run integration tests")
