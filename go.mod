@@ -8,10 +8,10 @@ require (
 	github.com/lunixbochs/vtclean v1.0.0
 	github.com/miekg/pkcs11 v1.1.2
 	github.com/moby/term v0.5.2
-	golang.org/x/crypto v0.51.0
-	golang.org/x/net v0.54.0
-	golang.org/x/sys v0.44.0
-	golang.org/x/term v0.43.0
+	golang.org/x/crypto v0.54.0
+	golang.org/x/net v0.56.0
+	golang.org/x/sys v0.47.0
+	golang.org/x/term v0.45.0
 )
 
 require (
@@ -19,7 +19,7 @@ require (
 	github.com/absfs/smbfs v0.9.1
 	github.com/go-git/go-billy/v5 v5.8.0
 	github.com/hanwen/go-fuse/v2 v2.10.1
-	github.com/pkg/sftp v1.13.10
+	github.com/pkg/sftp v1.13.11
 	github.com/willscott/go-nfs v0.0.3
 )
 
